@@ -27,7 +27,10 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
     super.dispose();
   }
 
-  Future<void> _handleLogin({required String email, required String password}) async {
+  Future<void> _handleLogin({
+    required String email,
+    required String password,
+  }) async {
     try {
       var bytes = utf8.encode(password);
       String hashedInput = sha256.convert(bytes).toString();
@@ -51,16 +54,18 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('is_admin_logged_in', true);
         await prefs.setString('admin_email', email);
-
-        final snackBarController = ScaffoldMessenger.of(context).showSnackBar(
+        if(mounted) {
+          final snackBarController = ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Connexion réussie !"),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 1),
           ),
         );
+          await snackBarController.closed;
 
-        await snackBarController.closed;
+        }
+
 
         if (mounted) {
           LoadingOverlay.show(context);
@@ -91,13 +96,18 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
       backgroundColor: DefaultColors.background,
       body: SingleChildScrollView(
         child: Container(
-          constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height,
+          ),
           alignment: Alignment.center,
           child: LayoutBuilder(
             builder: (context, constraints) {
               bool isMobile = constraints.maxWidth < 600;
               return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 40,
+                  horizontal: 20,
+                ),
                 child: Wrap(
                   crossAxisAlignment: WrapCrossAlignment.center,
                   alignment: WrapAlignment.center,
@@ -107,8 +117,10 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                       child: Card(
                         color: DefaultColors.background,
                         elevation: 5,
-                        shadowColor: DefaultColors.primary.withOpacity(0.3),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shadowColor: DefaultColors.primary.withValues(alpha: 0.3),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                         child: Container(
                           padding: const EdgeInsets.all(30),
                           width: isMobile ? double.infinity : 450,
@@ -117,34 +129,80 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text('Accès Administrateur',
-                                    style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: DefaultColors.primary)),
+                                Text(
+                                  'Accès Administrateur',
+                                  style: TextStyle(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.w900,
+                                    color: DefaultColors.primary,
+                                  ),
+                                ),
                                 const SizedBox(height: 30),
-                                RwTextview(controller: _emailController, hint: 'Email', isEmail: true, prefixIcon: Icons.email_rounded),
+                                RwTextview(
+                                  controller: _emailController,
+                                  hint: 'Email',
+                                  isEmail: true,
+                                  prefixIcon: Icons.email_rounded,
+                                ),
                                 const SizedBox(height: 15),
-                                RwTextview(controller: _passwordController, hint: "Mot de passe", isPassword: true),
+                                RwTextview(
+                                  controller: _passwordController,
+                                  hint: "Mot de passe",
+                                  isPassword: true,
+                                ),
                                 const SizedBox(height: 30),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      if (_formKey.currentState!.validate()) {
-                                        _handleLogin(email: _emailController.text.trim(), password: _passwordController.text);
-                                      }
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: DefaultColors.primary,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.all(20),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                                    child: const Text('Se connecter', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                GestureDetector(
+                                  onTap: () {
+                                    if (_formKey.currentState!.validate()) {
+                                      _handleLogin(
+                                        email: _emailController.text.trim(),
+                                        password: _passwordController.text,
+                                      );
+                                    }
+                                  },
+                                  child: Container(
+                                    width: double.infinity,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          DefaultColors.primary.withValues(alpha: 0.7),
+                                          DefaultColors.primary,
+                                        ],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: DefaultColors.primary.withValues(alpha: 0.4),
+                                          offset: const Offset(6, 6),
+                                          blurRadius: 20,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      // Note: You can add a loading state here similar to the User login
+                                      child: const Text(
+                                        "SE CONNECTER",
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.5,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 15),
                                 TextButton(
-                                  onPressed: () => Navigator.pushNamed(context, '/login'),
-                                  child: const Text("Continuer en tant qu'Expéditeur",
-                                      style: TextStyle(color: DefaultColors.primary, fontWeight: FontWeight.bold)),
+                                  onPressed: () =>
+                                      Navigator.pushNamed(context, '/login'),
+                                  child: const Text(
+                                    "Continuer en tant qu'expéditeur",
+                                    style: TextStyle(
+                                      color: DefaultColors.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -154,7 +212,11 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                     ),
                     Padding(
                       padding: const EdgeInsets.all(20),
-                      child: Image.asset(ImagesFiles.backgroundCar2, width: isMobile ? 300 : 450, fit: BoxFit.contain),
+                      child: Image.asset(
+                        ImagesFiles.backgroundCar2,
+                        width: isMobile ? 300 : 450,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ],
                 ),

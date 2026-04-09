@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class AdminGuard extends StatefulWidget {
+class UserGuard extends StatefulWidget {
   final Widget child;
-  const AdminGuard({super.key, required this.child});
+  const UserGuard({super.key, required this.child});
+
   @override
-  State<AdminGuard> createState() => _AdminGuardState();
+  State<UserGuard> createState() => _UserGuardState();
 }
 
-class _AdminGuardState extends State<AdminGuard> with WidgetsBindingObserver {
+class _UserGuardState extends State<UserGuard> with WidgetsBindingObserver {
   bool _isAuthorized = false;
 
   @override
@@ -32,15 +33,17 @@ class _AdminGuardState extends State<AdminGuard> with WidgetsBindingObserver {
   Future<void> _check() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload();
-    final bool isLoggedIn = prefs.getBool('is_admin_logged_in') ?? false;
+    final bool isLoggedIn = prefs.getBool('is_user_logged_in') ?? false;
 
     if (!isLoggedIn && mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/loginAdmin', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     } else if (mounted) {
       setState(() => _isAuthorized = true);
     }
   }
 
   @override
-  Widget build(BuildContext context) => _isAuthorized ? widget.child : const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext context) {
+    return _isAuthorized ? widget.child : const Scaffold(body: SizedBox.shrink());
+  }
 }

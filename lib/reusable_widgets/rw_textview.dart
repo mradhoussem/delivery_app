@@ -4,7 +4,7 @@ class RwTextview extends StatefulWidget {
   const RwTextview({
     super.key,
     required this.controller,
-    this.bordercolor = Colors.black38,
+    this.bordercolor = Colors.black26,
     this.focusBordercolor = const Color(0xFF96C8E3),
     this.textColor = Colors.black87,
     this.label,

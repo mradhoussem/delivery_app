@@ -61,7 +61,7 @@ class _InitPageState extends State<InitPage>
   Widget build(BuildContext context) {
     return Scaffold(
       // Using withOpacity for broader Flutter version support
-      backgroundColor: DefaultColors.primary.withOpacity(0.8),
+      backgroundColor: DefaultColors.primary.withValues(alpha: 0.8),
       body: Center(
         child: AnimatedBuilder(
           animation: _scaleAnimation,

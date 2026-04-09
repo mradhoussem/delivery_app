@@ -11,7 +11,7 @@ class DefaultColors {
   static const Color accent = Color(0xFF4C96B8); // Light Blue
 
   // Background colors
-  static const Color background = Colors.white;
+  static const Color background = Color(0xFFF0F2F5);
 
   // Text colors
   static const Color textPrimary = Color(0xFF212121); // Dark Grey
