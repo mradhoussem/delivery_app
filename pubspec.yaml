@@ -39,6 +39,11 @@ dependencies:
   gif_view: ^1.0.3
   crypto: ^3.0.7
   shared_preferences: ^2.5.5
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  qr_flutter: ^4.1.0
+  path_provider: ^2.1.5
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +55,12 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+formatter:
+  trailing_commas: preserve
+
+linter:
+  rules:
+    - require_trailing_commas
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -65,6 +76,7 @@ flutter:
   assets:
     - assets/gifs/
     - assets/images/
+
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

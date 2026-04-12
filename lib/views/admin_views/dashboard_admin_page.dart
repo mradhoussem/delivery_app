@@ -1,3 +1,4 @@
+import 'package:delivery_app/decoration/deco_neumorphic.dart';
 import 'package:delivery_app/tools/default_colors.dart';
 import 'package:flutter/material.dart';
 
@@ -55,7 +56,7 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
             height: 250,
             width: double.infinity,
             padding: const EdgeInsets.all(20),
-            decoration: _neumorphic(),
+            decoration: neumorphicDeco(),
             child: Center(
               child: Icon(
                 Icons.bar_chart_rounded,
@@ -76,7 +77,7 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
   Widget _statCard(String t, String v, IconData i, Color c) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: _neumorphic(),
+      decoration: neumorphicDeco(),
       child: Row(
         children: [
           CircleAvatar(
@@ -99,25 +100,6 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
           ),
         ],
       ),
-    );
-  }
-
-  BoxDecoration _neumorphic() {
-    return BoxDecoration(
-      color: const Color(0xFFF0F2F5),
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
-          offset: const Offset(10, 10),
-          blurRadius: 20,
-        ),
-        const BoxShadow(
-          color: Colors.white,
-          offset: Offset(-10, -10),
-          blurRadius: 20,
-        ),
-      ],
     );
   }
 }

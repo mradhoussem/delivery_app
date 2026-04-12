@@ -1,3 +1,4 @@
+import 'package:delivery_app/decoration/deco_neumorphic.dart';
 import 'package:delivery_app/firestore/models/m_user.dart';
 import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/views/admin_views/edit_password_page.dart';
@@ -55,10 +56,7 @@ class UsersViewPage extends StatelessWidget {
                 // Manual Refresh Group
                 Container(
                   padding: const EdgeInsets.only(left: 15),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  decoration: neumorphicDeco(),
                   child: GestureDetector(
                     onTap: isRefreshing ? null : onManualRefresh,
                     child: MouseRegion(

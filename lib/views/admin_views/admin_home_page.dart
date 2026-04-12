@@ -1,5 +1,7 @@
 import 'package:delivery_app/firestore/models/m_user.dart';
 import 'package:delivery_app/firestore/user_db.dart';
+import 'package:delivery_app/reusable_widgets/rw_appbar.dart';
+import 'package:delivery_app/reusable_widgets/rw_sidebar.dart';
 import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/views/admin_views/dashboard_admin_page.dart';
 import 'package:delivery_app/views/admin_views/users_view_page.dart';
@@ -26,10 +28,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
   @override
   void initState() {
     super.initState();
-    _fetchUsers(); // Initial fetch on startup
+    _fetchUsers();
   }
 
-  /// Centralized fetch method to update the cache
   Future<void> _fetchUsers() async {
     setState(() => _isReloading = true);
     try {
@@ -41,85 +42,72 @@ class _AdminHomePageState extends State<AdminHomePage> {
     } catch (e) {
       setState(() => _isReloading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Erreur de chargement: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Erreur de chargement: $e")));
       }
     }
   }
 
+  Future<void> _handleLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_admin_logged_in', false);
+    if (mounted) Navigator.pushReplacementNamed(context, '/loginAdmin');
+  }
+
   @override
   Widget build(BuildContext context) {
-    bool isWeb = MediaQuery.of(context).size.width > 900;
+    final bool isWeb = MediaQuery.of(context).size.width > 900;
 
-    // Define pages and inject dependencies
+    // ÉTAPE 1 : Vérifiez que l'index correspond bien aux pages définies ici
     final List<Widget> pages = [
       const DashboardAdminPage(),
+      // Index 0
       UsersViewPage(
+        // Index 1
         users: _cachedUsers,
         onManualRefresh: _fetchUsers,
         isRefreshing: _isReloading,
       ),
+      const Center(child: Text("Paramètres")),
+      // Index 2 (AJOUTÉ pour correspondre à la Sidebar)
     ];
 
     return PopScope(
-      // Allow the app to close/pop only if we are on the first tab (Dashboard)
       canPop: _selectedIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-
-        // If user is on Users tab, pressing back button takes them to Dashboard
-        if (_selectedIndex != 0) {
-          setState(() {
-            _selectedIndex = 0;
-          });
-        }
+        // Sécurité : évite de dépasser l'index si on revient au dashboard
+        if (_selectedIndex != 0) setState(() => _selectedIndex = 0);
       },
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: DefaultColors.background,
-        // On Web, the sidebar is part of the body Row. On Mobile, it's a Drawer.
-        drawer: isWeb ? null : _buildSidebar(context),
+        drawer: isWeb ? null : _buildSidebar(),
         body: Row(
           children: [
-            if (isWeb && _isSidebarOpen) _buildSidebar(context),
+            if (isWeb && _isSidebarOpen) _buildSidebar(),
             Expanded(
               child: Column(
                 children: [
-                  // --- TOP BAR ---
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.menu,
-                              color: DefaultColors.primary, size: 30),
-                          onPressed: () {
-                            if (isWeb) {
-                              setState(() => _isSidebarOpen = !_isSidebarOpen);
-                            } else {
-                              _scaffoldKey.currentState?.openDrawer();
-                            }
-                          },
-                        ),
-                        const Spacer(),
-                        const Icon(Icons.search, color: Colors.grey),
-                        const SizedBox(width: 20),
-                        const Icon(Icons.notifications_none, color: Colors.grey),
-                        const SizedBox(width: 20),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: DefaultColors.primary,
-                          child: const Text("A",
-                              style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
+                  RwAppbar(
+                    username: "Admin",
+                    primaryColor: DefaultColors.primary,
+                    onMenuPressed: () {
+                      if (isWeb) {
+                        setState(() => _isSidebarOpen = !_isSidebarOpen);
+                      } else {
+                        _scaffoldKey.currentState?.openDrawer();
+                      }
+                    },
+                  ),
+                  Expanded(
+                    child: IndexedStack(
+                      // ÉTAPE 2 : On s'assure que l'index est toujours valide avant de l'afficher
+                      index: _selectedIndex < pages.length ? _selectedIndex : 0,
+                      children: pages,
                     ),
                   ),
-
-                  // --- PAGE CONTENT ---
-                  // This Expanded contains whichever tab is currently selected
-                  Expanded(child: pages[_selectedIndex]),
                 ],
               ),
             ),
@@ -129,106 +117,18 @@ class _AdminHomePageState extends State<AdminHomePage> {
     );
   }
 
-  /// Sidebar UI Component
-  Widget _buildSidebar(BuildContext context) {
-    return Container(
-      width: 250,
-      height: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            DefaultColors.primary.withValues(red: 0.6),
-            DefaultColors.primary,
-          ],
-        ),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 50),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  child: const Text("L", style: TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  "LOGO",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 40),
-          _sidebarItem(0, Icons.home_filled, "Tableau de bord"),
-          _sidebarItem(1, Icons.people_alt_rounded, "utilisateurs"),
-          const Spacer(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.white70),
-            title: const Text(
-              "Déconnexion",
-              style: TextStyle(color: Colors.white70),
-            ),
-              onTap: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('is_admin_logged_in', false); // Clear admin flag
-                // await prefs.clear(); // Or clear everything if preferred
-
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/loginAdmin');
-                }
-              }
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  /// Sidebar Navigation Item
-  Widget _sidebarItem(int index, IconData icon, String title) {
-    bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
+  // Helper pour éviter la répétition du widget Sidebar
+  Widget _buildSidebar() {
+    return RwSideBar(
+      portalTitle: "ADMIN PORTAL",
+      selectedIndex: _selectedIndex,
+      primaryColor: Colors.white,
+      backgroundColor: DefaultColors.primary,
+      unselectedColor: Colors.white70,
+      onItemSelected: (index) {
         setState(() => _selectedIndex = index);
-        // On mobile/small screens, close the drawer after selection
-        if (MediaQuery.of(context).size.width <= 900) {
-          Navigator.pop(context);
-        }
       },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 15),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+      onLogout: _handleLogout,
     );
   }
 }
