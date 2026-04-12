@@ -1,8 +1,8 @@
 import 'package:delivery_app/reusable_widgets/rw_appbar.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar.dart';
 import 'package:delivery_app/tools/default_colors.dart';
-import 'package:delivery_app/views/user_views/PackagesListPage.dart';
 import 'package:delivery_app/views/user_views/dashboard_user_page.dart';
+import 'package:delivery_app/views/user_views/packages_list_page.dart' show PackagesListPage;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
