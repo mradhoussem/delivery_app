@@ -3,14 +3,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class UserModel {
   final String id;
   final String username;
-  final String firstName; // Nouveau champ
-  final String lastName;  // Nouveau champ
+  final String firstName;
+  final String lastName;
   final String phone1;
   final String phone2;
   final String role;
   final DateTime? createdAt;
 
-  UserModel({
+  const UserModel({
     required this.id,
     required this.username,
     required this.firstName,
@@ -21,9 +21,28 @@ class UserModel {
     this.createdAt,
   });
 
-  // Convert Firestore Document to UserModel
+  UserModel copyWith({
+    String? id,
+    String? username,
+    String? firstName,
+    String? lastName,
+    String? phone1,
+    String? phone2,
+    String? role,
+    DateTime? createdAt,
+  }) => UserModel(
+    id: id ?? this.id,
+    username: username ?? this.username,
+    firstName: firstName ?? this.firstName,
+    lastName: lastName ?? this.lastName,
+    phone1: phone1 ?? this.phone1,
+    phone2: phone2 ?? this.phone2,
+    role: role ?? this.role,
+    createdAt: createdAt ?? this.createdAt,
+  );
+
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>;
     return UserModel(
       id: doc.id,
       username: data['username'] ?? 'Inconnu',
@@ -36,7 +55,6 @@ class UserModel {
     );
   }
 
-  // Convert UserModel to Map for Saving
   Map<String, dynamic> toMap() {
     return {
       'username': username,

@@ -24,8 +24,10 @@ class PackageItemCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("${package.firstName} ${package.lastName}",
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Flexible(
+                      child: Text("${package.firstName} ${package.lastName}",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
                     _buildStatusBadge(package.status),
                   ],
                 ),

@@ -3,25 +3,23 @@ import 'package:delivery_app/firestore/enums/e_governorate.dart';
 import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 
 class PackageModel {
-  String id;
-  String firstName;
-  String lastName;
-  String phone1;
-  String? phone2;
-  EGovernorate governorate;
-  String address;
-  double amount;
-  bool isExchange;
-  String? packageDesignation;
-  String? comment;
-  EPackageStatus status;
-  DateTime createdAt;
+  final String id;
+  final String firstName;
+  final String lastName;
+  final String phone1;
+  final String? phone2;
+  final EGovernorate governorate;
+  final String address;
+  final double amount;
+  final bool isExchange;
+  final String? packageDesignation;
+  final String? comment;
+  final EPackageStatus status;
+  final DateTime createdAt;
+  final String creatorUserId;
+  final String creatorUsername;
 
-  // Traçabilité simplifiée selon tes SharedPreferences
-  String creatorUserId;
-  String creatorUsername;
-
-  PackageModel({
+  const PackageModel({
     required this.id,
     required this.firstName,
     required this.lastName,
@@ -38,6 +36,40 @@ class PackageModel {
     required this.creatorUsername,
     required this.createdAt,
   });
+
+  PackageModel copyWith({
+    String? id,
+    String? firstName,
+    String? lastName,
+    String? phone1,
+    String? phone2,
+    EGovernorate? governorate,
+    String? address,
+    double? amount,
+    bool? isExchange,
+    String? packageDesignation,
+    String? comment,
+    EPackageStatus? status,
+    DateTime? createdAt,
+    String? creatorUserId,
+    String? creatorUsername,
+  }) => PackageModel(
+    id: id ?? this.id,
+    firstName: firstName ?? this.firstName,
+    lastName: lastName ?? this.lastName,
+    phone1: phone1 ?? this.phone1,
+    phone2: phone2 ?? this.phone2,
+    governorate: governorate ?? this.governorate,
+    address: address ?? this.address,
+    amount: amount ?? this.amount,
+    isExchange: isExchange ?? this.isExchange,
+    packageDesignation: packageDesignation ?? this.packageDesignation,
+    comment: comment ?? this.comment,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    creatorUserId: creatorUserId ?? this.creatorUserId,
+    creatorUsername: creatorUsername ?? this.creatorUsername,
+  );
 
   Map<String, dynamic> toMap() {
     return {
@@ -59,8 +91,7 @@ class PackageModel {
   }
 
   factory PackageModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
+    final data = doc.data() as Map<String, dynamic>;
     return PackageModel(
       id: doc.id,
       firstName: data['firstName'] ?? '',

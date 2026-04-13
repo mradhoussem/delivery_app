@@ -1,8 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:delivery_app/dialogs/rd_print_save_package.dart';
 import 'package:delivery_app/firestore/enums/e_governorate.dart';
 import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/models/m_package.dart';
+import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
@@ -18,8 +18,7 @@ class AddPackagePage extends StatefulWidget {
 
 class _AddPackagePageState extends State<AddPackagePage> {
   final _formKey = GlobalKey<FormState>();
-
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final PackageDB _db = PackageDB();
 
   final TextEditingController _fNameController = TextEditingController();
   final TextEditingController _lNameController = TextEditingController();
@@ -48,62 +47,62 @@ class _AddPackagePageState extends State<AddPackagePage> {
   }
 
   Future<void> _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    if (!_formKey.currentState!.validate()) return;
 
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final String? userId = prefs.getString('user_id');
-        final String? username = prefs.getString('username');
+    setState(() => _isLoading = true);
 
-        if (userId == null || username == null) {
-          throw Exception("Session expirée.");
-        }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final String? userId = prefs.getString('user_id');
+      final String? username = prefs.getString('username');
 
-        final newPackage = PackageModel(
-          id: '',
-          firstName: _fNameController.text.trim(),
-          lastName: _lNameController.text.trim(),
-          phone1: _phone1Controller.text.trim(),
-          phone2: _phone2Controller.text.trim().isEmpty
-              ? null
-              : _phone2Controller.text.trim(),
-          governorate: EGovernorateExtension.fromName(_selectedGov!),
-          address: _addressController.text.trim(),
-          amount: double.parse(
-            _amountController.text.trim().replaceAll(',', '.'),
-          ),
-          isExchange: _isExchange,
-          packageDesignation: _isExchange
-              ? _designationController.text.trim()
-              : null,
-          comment: _commentController.text.trim().isEmpty
-              ? null
-              : _commentController.text.trim(),
-          status: EPackageStatus.waiting,
-          createdAt: DateTime.now(),
-          creatorUserId: userId,
-          creatorUsername: username,
+      if (userId == null || username == null) {
+        throw Exception('Session expirée.');
+      }
+
+      final newPackage = PackageModel(
+        id: '',
+        firstName: _fNameController.text.trim(),
+        lastName: _lNameController.text.trim(),
+        phone1: _phone1Controller.text.trim(),
+        phone2: _phone2Controller.text.trim().isEmpty
+            ? null
+            : _phone2Controller.text.trim(),
+        governorate: EGovernorateExtension.fromName(_selectedGov!),
+        address: _addressController.text.trim(),
+        amount: double.parse(
+          _amountController.text.trim().replaceAll(',', '.'),
+        ),
+        isExchange: _isExchange,
+        packageDesignation: _isExchange
+            ? _designationController.text.trim()
+            : null,
+        comment: _commentController.text.trim().isEmpty
+            ? null
+            : _commentController.text.trim(),
+        status: EPackageStatus.waiting,
+        createdAt: DateTime.now(),
+        creatorUserId: userId,
+        creatorUsername: username,
+      );
+
+      final docRef = await _db.addPackage(newPackage);
+      final savedPackage = newPackage.copyWith(id: docRef.id);
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        RdPrintSavePackage.show(
+          context,
+          savedPackage,
+          doublePopNavigation: true,
         );
-
-        DocumentReference docRef = await _firestore
-            .collection('packages')
-            .add(newPackage.toMap());
-        newPackage.id = docRef.id;
-
-        if (mounted) {
-          setState(() => _isLoading = false);
-          if (mounted) {
-            RdPrintSavePackage.show(context, newPackage , doublePopNavigation: true);
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Erreur: $e"), backgroundColor: Colors.red),
-          );
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -114,7 +113,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
       backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         title: const Text(
-          "Nouvelle Expédition",
+          'Nouvelle Expédition',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         backgroundColor: Colors.white,
@@ -128,16 +127,16 @@ class _AddPackagePageState extends State<AddPackagePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle("DESTINATAIRE"),
+              _buildSectionTitle('DESTINATAIRE'),
               Row(
                 children: [
                   Expanded(
                     child: RwTextview(
                       controller: _fNameController,
-                      hint: "Prénom",
+                      hint: 'Prénom',
                       prefixIcon: Icons.person_outline,
                       iconColor: DefaultColors.primary,
-                      validator: (v) => v!.isEmpty ? "Requis" : null,
+                      validator: (v) => v!.isEmpty ? 'Requis' : null,
                       maxLength: 200,
                     ),
                   ),
@@ -145,10 +144,10 @@ class _AddPackagePageState extends State<AddPackagePage> {
                   Expanded(
                     child: RwTextview(
                       controller: _lNameController,
-                      hint: "Nom",
+                      hint: 'Nom',
                       prefixIcon: Icons.person,
                       iconColor: DefaultColors.primary,
-                      validator: (v) => v!.isEmpty ? "Requis" : null,
+                      validator: (v) => v!.isEmpty ? 'Requis' : null,
                       maxLength: 200,
                     ),
                   ),
@@ -157,18 +156,18 @@ class _AddPackagePageState extends State<AddPackagePage> {
               const SizedBox(height: 15),
               RwTextview(
                 controller: _phone1Controller,
-                hint: "Téléphone 1",
+                hint: 'Téléphone 1',
                 textNumeric: true,
                 prefixIcon: Icons.phone_iphone,
                 iconColor: DefaultColors.primary,
                 maxLength: 8,
                 minLength: 8,
-                validator: (v) => v!.isEmpty ? "Requis" : null,
+                validator: (v) => v!.isEmpty ? 'Requis' : null,
               ),
               const SizedBox(height: 15),
               RwTextview(
                 controller: _phone2Controller,
-                hint: "Téléphone 2 (Optionnel)",
+                hint: 'Téléphone 2 (Optionnel)',
                 textNumeric: true,
                 prefixIcon: Icons.phone_android,
                 iconColor: DefaultColors.primary,
@@ -176,7 +175,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
                 minLength: 8,
               ),
               const SizedBox(height: 30),
-              _buildSectionTitle("LIVRAISON"),
+              _buildSectionTitle('LIVRAISON'),
               RwDropdown(
                 value: _selectedGov,
                 items: EGovernorate.values.map((e) => e.name).toList(),
@@ -187,20 +186,20 @@ class _AddPackagePageState extends State<AddPackagePage> {
               const SizedBox(height: 15),
               RwTextview(
                 controller: _addressController,
-                hint: "Adresse exacte",
+                hint: 'Adresse exacte',
                 prefixIcon: Icons.location_on_outlined,
                 iconColor: DefaultColors.primary,
-                validator: (v) => v!.isEmpty ? "Requis" : null,
+                validator: (v) => v!.isEmpty ? 'Requis' : null,
                 maxLength: 500,
               ),
               const SizedBox(height: 15),
               RwTextview(
                 controller: _amountController,
-                hint: "Montant à collecter (TND)",
+                hint: 'Montant à collecter (TND)',
                 textDouble: true,
                 prefixIcon: Icons.payments_outlined,
                 iconColor: DefaultColors.primary,
-                validator: (v) => v!.isEmpty ? "Requis" : null,
+                validator: (v) => v!.isEmpty ? 'Requis' : null,
                 maxLength: 20,
               ),
               const SizedBox(height: 25),
@@ -208,7 +207,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
               const SizedBox(height: 15),
               RwTextview(
                 controller: _commentController,
-                hint: "Remarque",
+                hint: 'Remarque',
                 prefixIcon: Icons.textsms_outlined,
                 iconColor: DefaultColors.primary,
                 maxLength: 1000,
@@ -246,7 +245,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
         children: [
           SwitchListTile(
             title: const Text(
-              "Échange de colis",
+              'Échange de colis',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
             value: _isExchange,
@@ -261,10 +260,10 @@ class _AddPackagePageState extends State<AddPackagePage> {
               padding: const EdgeInsets.all(12.0),
               child: RwTextview(
                 controller: _designationController,
-                hint: "Que doit-on récupérer ?",
+                hint: 'Que doit-on récupérer ?',
                 prefixIcon: Icons.inventory_2_outlined,
                 iconColor: DefaultColors.primary,
-                validator: (v) => (_isExchange && v!.isEmpty) ? "Requis" : null,
+                validator: (v) => (_isExchange && v!.isEmpty) ? 'Requis' : null,
                 maxLength: 1000,
               ),
             ),

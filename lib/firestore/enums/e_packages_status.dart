@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum EPackageStatus {
   waiting, // 1
   deposit, // 2
@@ -10,55 +12,63 @@ enum EPackageStatus {
 }
 
 extension EPackageStatusExtension on EPackageStatus {
-  // Conversion Enum -> String (Affichage UI)
   String get label {
     switch (this) {
-      case EPackageStatus.waiting:
-        return "En Attente";
-      case EPackageStatus.deposit:
-        return "Au Dépot";
-      case EPackageStatus.returnFromDeposit:
-        return "Retour Dépot";
-      case EPackageStatus.progressing:
-        return "En Cours";
-      case EPackageStatus.delivered:
-        return "Livrée";
-      case EPackageStatus.payed:
-        return "Livrée payée";
-      case EPackageStatus.permanentReturn:
-        return "Retour définitif";
-      case EPackageStatus.returnReceived:
-        return "Retour réçu";
+      case EPackageStatus.waiting: return "En Attente";
+      case EPackageStatus.deposit: return "Au Dépot";
+      case EPackageStatus.returnFromDeposit: return "Retour Dépot";
+      case EPackageStatus.progressing: return "En Cours";
+      case EPackageStatus.delivered: return "Livrée";
+      case EPackageStatus.payed: return "Livrée payée";
+      case EPackageStatus.permanentReturn: return "Retour définitif";
+      case EPackageStatus.returnReceived: return "Retour réçu";
     }
   }
 
-  // Pour stocker l'ID numérique si nécessaire
-  int get id {
+  // Define the colors inside the enum extension
+  List<Color> get gradientColors {
     switch (this) {
       case EPackageStatus.waiting:
-        return 1;
+      // Soft Slate: Neutral and calm
+        return [const Color(0xFF607D8B), const Color(0xFF90A4AE)];
       case EPackageStatus.deposit:
-        return 2;
+      // Ocean Blue: Professional and stable
+        return [const Color(0xFF1E88E5), const Color(0xFF64B5F6)];
       case EPackageStatus.returnFromDeposit:
-        return 3;
+      // Sunset Orange: Warning but not critical
+        return [const Color(0xFFF4511E), const Color(0xFFFF8A65)];
       case EPackageStatus.progressing:
-        return 4;
+      // Electric Violet: Movement and energy
+        return [const Color(0xFF6A11CB), const Color(0xFF2575FC)];
       case EPackageStatus.delivered:
-        return 5;
+      // Fresh Leaf: Success and completion
+        return [const Color(0xFF43A047), const Color(0xFF81C784)];
       case EPackageStatus.payed:
-        return 6;
+      // Royal Emerald: Financial completion / Premium
+        return [const Color(0xFF00897B), const Color(0xFF4DB6AC)];
       case EPackageStatus.permanentReturn:
-        return 7;
+      // Deep Crimson: Finality / Action required
+        return [const Color(0xFFE53935), const Color(0xFFEF5350)];
       case EPackageStatus.returnReceived:
-        return 8;
+      // Indigo: Back in inventory / Secure
+        return [const Color(0xFF3949AB), const Color(0xFF7986CB)];
     }
   }
 
-  // Conversion statique Int -> Enum
-  static EPackageStatus fromInt(int id) {
-    return EPackageStatus.values.firstWhere(
-      (e) => e.id == id,
-      orElse: () => EPackageStatus.waiting,
-    );
+  int get id {
+    switch (this) {
+      case EPackageStatus.waiting: return 1;
+      case EPackageStatus.deposit: return 2;
+      case EPackageStatus.returnFromDeposit: return 3;
+      case EPackageStatus.progressing: return 4;
+      case EPackageStatus.delivered: return 5;
+      case EPackageStatus.payed: return 6;
+      case EPackageStatus.permanentReturn: return 7;
+      case EPackageStatus.returnReceived: return 8;
+    }
   }
 }
+
+
+
+

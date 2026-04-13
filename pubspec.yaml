@@ -44,6 +44,7 @@ dependencies:
   qr_flutter: ^4.1.0
   path_provider: ^2.1.5
   intl: ^0.20.2
+  connectivity_plus: ^7.1.1
 
 dev_dependencies:
   flutter_test:

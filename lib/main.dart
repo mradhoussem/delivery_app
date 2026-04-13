@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:delivery_app/auth_security/user_guard.dart';
 import 'package:delivery_app/login/login_admin_page.dart';
 import 'package:delivery_app/tools/default_colors.dart';
@@ -6,6 +5,7 @@ import 'package:delivery_app/views/admin_views/add_user_page.dart';
 import 'package:delivery_app/views/admin_views/admin_home_page.dart';
 import 'package:delivery_app/views/user_views/user_home_page.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/gestures.dart'; // Required for PointerDeviceKind
 import 'package:flutter/material.dart';
 import 'auth_security/admin_guard.dart';
 import 'firestore/firebase_options.dart';
@@ -14,18 +14,19 @@ import 'firestore/firebase_options.dart';
 import 'init/init_page.dart';
 import 'login/login_page.dart';
 
+// Custom Scroll Behavior to enable Mouse Dragging on Web/Desktop
+class MyCustomScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Quick connectivity check
-  FirebaseFirestore.instance
-      .collection('users')
-      .limit(1)
-      .get()
-      .then((value) => debugPrint("Firestore connected!"))
-      .catchError((e) => debugPrint("Firestore error: $e"));
-
   runApp(const MyApp());
 }
 
@@ -36,6 +37,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // Apply the scroll behavior globally
+      scrollBehavior: MyCustomScrollBehavior(),
       title: 'Delivery App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: DefaultColors.background),
@@ -50,11 +53,10 @@ class MyApp extends StatelessWidget {
         '/': (context) => const InitPage(),
         '/login': (context) => const LoginPage(),
         '/loginAdmin': (context) => const LoginAdminPage(),
-        '/Home': (context) => const AdminGuard(child: UserHomePage()),
+        '/Home': (context) => const UserGuard(child: UserHomePage()),
         '/adminHome': (context) => const AdminGuard(child: AdminHomePage()),
         '/addUser': (context) => const AdminGuard(child: AddUserPage()),
         '/userHomePage': (context) => const UserGuard(child: UserHomePage()),
-
       },
     );
   }

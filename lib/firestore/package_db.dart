@@ -91,7 +91,25 @@ class PackageDB {
     }
   }
 
-  Future<void> addPackage(PackageModel package) async => await _packageRef.add(package);
+  Future<int> getPackageCountByStatus({required String userId, String? status}) async {
+    try {
+      Query<PackageModel> query = _packageRef.where('creatorUserId', isEqualTo: userId);
+
+      if (status != null) {
+        query = query.where('status', isEqualTo: status);
+      }
+
+      final aggregateQuery = query.count();
+      final snapshot = await aggregateQuery.get();
+      return snapshot.count ?? 0;
+    } catch (e) {
+      debugPrint("Firestore Count Error: $e");
+      return 0;
+    }
+  }
+
+  Future<DocumentReference> addPackage(PackageModel package) => _packageRef.add(package);
+
 
   Future<void> updatePackageFields(String packageId, Map<String, dynamic> data) async {
     await _db.collection(_collection).doc(packageId).update(data);

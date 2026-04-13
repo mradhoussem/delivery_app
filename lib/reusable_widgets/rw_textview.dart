@@ -21,8 +21,9 @@ class RwTextview extends StatefulWidget {
     this.suffixIcon,
     this.iconColor,
     this.validator,
-    this.maxLength, // Nouvelle propriété
-    this.minLength, // Nouvelle propriété
+    this.maxLength,
+    this.minLength,
+    this.onSubmitted, // Nouvelle propriété
   });
 
   final TextEditingController controller;
@@ -44,6 +45,7 @@ class RwTextview extends StatefulWidget {
   final FormFieldValidator? validator;
   final int? maxLength;
   final int? minLength;
+  final ValueChanged<String>? onSubmitted; // Nouvelle propriété
 
   @override
   State<RwTextview> createState() => _RwTextviewState();
@@ -98,6 +100,7 @@ class _RwTextviewState extends State<RwTextview> {
     return TextFormField(
       controller: widget.controller,
       validator: _validateInput,
+      onFieldSubmitted: widget.onSubmitted, // Liaison ici
       obscureText: widget.isPassword == true ? _obscure : false,
       maxLength: widget.maxLength,
       // Limite physique de saisie
@@ -135,13 +138,13 @@ class _RwTextviewState extends State<RwTextview> {
 
         prefixIcon: widget.isPassword == true
             ? IconButton(
-                icon: Icon(
-                  _obscure ? Icons.visibility_off : Icons.visibility,
-                  size: 18,
-                  color: widget.iconColor,
-                ),
-                onPressed: () => setState(() => _obscure = !_obscure),
-              )
+          icon: Icon(
+            _obscure ? Icons.visibility_off : Icons.visibility,
+            size: 18,
+            color: widget.iconColor,
+          ),
+          onPressed: () => setState(() => _obscure = !_obscure),
+        )
             : widget.prefixIcon != null
             ? Icon(widget.prefixIcon!, size: 18, color: widget.iconColor)
             : null,

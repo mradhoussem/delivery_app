@@ -1,4 +1,6 @@
 import 'package:delivery_app/dialogs/rd_print_save_package.dart';
+import 'package:delivery_app/firestore/enums/e_governorate.dart';
+import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/tools/default_colors.dart';
 import 'package:flutter/material.dart';
@@ -45,7 +47,7 @@ class PackageDetailsPage extends StatelessWidget {
               children: [
                 _infoRow(Icons.person, "Nom Complet", "${package.firstName} ${package.lastName}"),
                 _infoRow(Icons.phone, "Contacts", "${package.phone1}${package.phone2 != null ? ' / ${package.phone2}' : ''}"),
-                _infoRow(Icons.location_city, "Gouvernorat", package.governorate.name),
+                _infoRow(Icons.location_city, "Gouvernorat", package.governorate.label),
                 _infoRow(Icons.map, "Adresse", package.address),
               ],
             ),
@@ -65,8 +67,7 @@ class PackageDetailsPage extends StatelessWidget {
               children: [
                 _infoRow(Icons.calendar_month, "Date de création", DateFormat('dd/MM/yyyy HH:mm').format(package.createdAt)),
                 _infoRow(Icons.admin_panel_settings_outlined, "Créé par", package.creatorUsername),
-                _infoRow(Icons.info_outline, "Status actuel", package.status.name.toUpperCase()),
-              ],
+                _infoRow(Icons.info_outline, "Status actuel", package.status.label),              ],
             ),
           ],
         ),

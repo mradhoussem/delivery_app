@@ -90,6 +90,15 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _validateAndSubmit() {
+    if (_formKey.currentState!.validate()) {
+      _handleUserLogin(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+      );
+    }
+  }
+
   void _showError(String msg) {
     ScaffoldMessenger.of(
       context,
@@ -107,8 +116,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: DefaultColors.background,
-      body:
-      SingleChildScrollView(
+      body: SingleChildScrollView(
         child: Container(
           constraints: BoxConstraints(
             minHeight: MediaQuery.of(context).size.height,
@@ -180,6 +188,8 @@ class _LoginPageState extends State<LoginPage> {
                                   isPassword: true,
                                   validator: (v) =>
                                       v!.isEmpty ? "Mot de passe requis" : null,
+                                  onSubmitted: (_) =>
+                                      _validateAndSubmit(), // Trigger on Enter
                                 ),
                                 const SizedBox(height: 30),
                                 GestureDetector(
