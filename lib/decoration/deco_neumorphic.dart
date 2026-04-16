@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 BoxDecoration neumorphicDeco() {
   return BoxDecoration(
-    color: const Color(0xFFF0F2F5),
+    color: Colors.white,
     borderRadius: BorderRadius.circular(20),
     boxShadow: [
       BoxShadow(

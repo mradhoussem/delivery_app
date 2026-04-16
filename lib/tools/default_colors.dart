@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 class DefaultColors {
   // Primary color: main brand color
-  static const Color primary = Color(0xFFdf4435); // Deep Purple
+  static const Color primary = Color(0xFFF44E22); // Deep Purple
 
   // Secondary color: for highlights, buttons, etc.
-  static const Color secondary = Color(0xFFFFC107); // Amber
+  static const Color secondary = Color(0xFF0E3447); // Amber
 
   // Accent color: for interactive elements
   static const Color accent = Color(0xFF4C96B8); // Light Blue

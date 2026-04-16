@@ -1,10 +1,8 @@
-import 'package:delivery_app/firestore/models/m_user.dart';
-import 'package:delivery_app/firestore/user_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_appbar.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar.dart';
 import 'package:delivery_app/tools/default_colors.dart';
-import 'package:delivery_app/views/admin_views/dashboard_admin_page.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar_item.dart';
+import 'package:delivery_app/views/admin_views/packages_admin_page.dart';
 import 'package:delivery_app/views/admin_views/users_view_page.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,37 +18,16 @@ class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
   bool _isSidebarOpen = true;
 
+  // NEW: Track which pages have been visited to avoid loading everything at once
+  late List<bool> _activatedPages;
+
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
-  final UserDB _userRepo = UserDB();
-
-  List<UserModel>? _cachedUsers;
-  bool _isReloading = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchUsers();
-  }
-
-  Future<void> _fetchUsers() async {
-    setState(() => _isReloading = true);
-
-    try {
-      final users = await _userRepo.getAllUsers();
-      setState(() {
-        _cachedUsers = users;
-        _isReloading = false;
-      });
-    } catch (e) {
-      setState(() => _isReloading = false);
-
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Erreur de chargement: $e")));
-      }
-    }
+    // We have 3 items in the sidebar. Index 0 is active by default.
+    _activatedPages = [true, false, false];
   }
 
   Future<void> _handleLogout() async {
@@ -62,29 +39,22 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
-  // ⭐ SIDEBAR ITEMS (NEW ARCHITECTURE)
   List<RwSideBarItem> _buildItems() {
     return [
       RwSideBarItem(
-        title: "Dashboard",
+        title: "Tableau de bord",
         icon: Icons.dashboard,
-        page: const DashboardAdminPage(),
+        page: const PackagesAdminPage(),
       ),
-
       RwSideBarItem(
-        title: "Users",
+        title: "Utilisateurs",
         icon: Icons.people,
-        page: UsersViewPage(
-          users: _cachedUsers,
-          onManualRefresh: _fetchUsers,
-          isRefreshing: _isReloading,
-        ),
+        page: const UsersViewPage(),
       ),
-
       RwSideBarItem(
         title: "Paramètres",
         icon: Icons.settings,
-        page: const Center(child: Text("Paramètres")),
+        page: const Center(child: Text("Paramètres Admin")),
       ),
     ];
   }
@@ -92,23 +62,20 @@ class _AdminHomePageState extends State<AdminHomePage> {
   @override
   Widget build(BuildContext context) {
     final bool isWeb = MediaQuery.of(context).size.width > 900;
-
     final items = _buildItems();
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: DefaultColors.background,
+      backgroundColor: DefaultColors.pagesBackground,
       drawer: isWeb ? null : _buildSidebar(items),
-
       body: Row(
         children: [
           if (isWeb && _isSidebarOpen) _buildSidebar(items),
-
           Expanded(
             child: Column(
               children: [
                 RwAppbar(
-                  username: "Admin",
+                  username: "Administrateur",
                   primaryColor: DefaultColors.primary,
                   onMenuPressed: () {
                     if (isWeb) {
@@ -118,11 +85,16 @@ class _AdminHomePageState extends State<AdminHomePage> {
                     }
                   },
                 ),
-
                 Expanded(
-                  child: _cachedUsers == null && _selectedIndex == 1
-                      ? const Center(child: CircularProgressIndicator())
-                      : items[_selectedIndex].page,
+                  child: IndexedStack(
+                    index: _selectedIndex,
+                    children: items.asMap().entries.map((entry) {
+                      // Optimization: If not activated yet, show empty box
+                      return _activatedPages[entry.key]
+                          ? entry.value.page
+                          : const SizedBox.shrink();
+                    }).toList(),
+                  ),
                 ),
               ],
             ),
@@ -138,10 +110,19 @@ class _AdminHomePageState extends State<AdminHomePage> {
       selectedIndex: _selectedIndex,
       items: items,
       primaryColor: Colors.white,
+      // Standard admin theme
       backgroundColor: DefaultColors.primary,
       unselectedColor: Colors.white70,
       onItemSelected: (index) {
-        setState(() => _selectedIndex = index);
+        setState(() {
+          _selectedIndex = index;
+          _activatedPages[index] = true; // Activate the page on first visit
+        });
+
+        // Close drawer automatically on mobile
+        if (MediaQuery.of(context).size.width <= 900) {
+          _scaffoldKey.currentState?.closeDrawer();
+        }
       },
       onLogout: _handleLogout,
     );

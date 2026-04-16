@@ -106,7 +106,7 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                       child: Card(
                         color: DefaultColors.background,
                         elevation: 5,
-                        shadowColor: DefaultColors.primary.withValues(
+                        shadowColor: DefaultColors.secondary.withValues(
                           alpha: 0.3,
                         ),
                         shape: RoundedRectangleBorder(
@@ -125,7 +125,7 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                                   style: TextStyle(
                                     fontSize: 25,
                                     fontWeight: FontWeight.w900,
-                                    color: DefaultColors.primary,
+                                    color: DefaultColors.secondary,
                                   ),
                                 ),
                                 const SizedBox(height: 30),
@@ -153,15 +153,15 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                                       borderRadius: BorderRadius.circular(20),
                                       gradient: LinearGradient(
                                         colors: [
-                                          DefaultColors.primary.withValues(
+                                          DefaultColors.secondary.withValues(
                                             alpha: 0.7,
                                           ),
-                                          DefaultColors.primary,
+                                          DefaultColors.secondary,
                                         ],
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: DefaultColors.primary
+                                          color: DefaultColors.secondary
                                               .withValues(alpha: 0.4),
                                           offset: const Offset(6, 6),
                                           blurRadius: 20,
@@ -187,7 +187,7 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
                                   child: const Text(
                                     "Continuer en tant qu'expéditeur",
                                     style: TextStyle(
-                                      color: DefaultColors.primary,
+                                      color: DefaultColors.secondary,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),

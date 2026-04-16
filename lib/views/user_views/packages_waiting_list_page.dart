@@ -165,11 +165,6 @@ class _PackagesWaitingListPageState extends State<PackagesWaitingListPage> {
     _fetchPage(1);
   }
 
-  void _invalidateCurrentPage() {
-    _cache.remove(_cacheKey(_currentPage));
-    _fetchPage(_currentPage);
-  }
-
   @override
   Widget build(BuildContext context) {
     // 6. Safety check: if for some reason build is called and we aren't init'd

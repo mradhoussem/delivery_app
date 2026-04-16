@@ -100,7 +100,8 @@ class _RwTextviewState extends State<RwTextview> {
     return TextFormField(
       controller: widget.controller,
       validator: _validateInput,
-      onFieldSubmitted: widget.onSubmitted, // Liaison ici
+      onFieldSubmitted: widget.onSubmitted,
+      // Liaison ici
       obscureText: widget.isPassword == true ? _obscure : false,
       maxLength: widget.maxLength,
       // Limite physique de saisie
@@ -118,7 +119,8 @@ class _RwTextviewState extends State<RwTextview> {
           FilteringTextInputFormatter.digitsOnly,
 
         if (widget.textDouble == true)
-          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+          // Modified Regex: Allows digits, and IF there is a dot, allows max 3 digits after it
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
       ],
 
       decoration: InputDecoration(
@@ -138,13 +140,13 @@ class _RwTextviewState extends State<RwTextview> {
 
         prefixIcon: widget.isPassword == true
             ? IconButton(
-          icon: Icon(
-            _obscure ? Icons.visibility_off : Icons.visibility,
-            size: 18,
-            color: widget.iconColor,
-          ),
-          onPressed: () => setState(() => _obscure = !_obscure),
-        )
+                icon: Icon(
+                  _obscure ? Icons.visibility_off : Icons.visibility,
+                  size: 18,
+                  color: widget.iconColor,
+                ),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              )
             : widget.prefixIcon != null
             ? Icon(widget.prefixIcon!, size: 18, color: widget.iconColor)
             : null,

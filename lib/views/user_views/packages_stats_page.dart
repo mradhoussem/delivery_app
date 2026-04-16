@@ -1,4 +1,3 @@
-import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:delivery_app/firestore/enums/e_packages_status.dart';

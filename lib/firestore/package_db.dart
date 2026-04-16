@@ -91,6 +91,54 @@ class PackageDB {
     }
   }
 
+  Future<QuerySnapshot<PackageModel>> getAdminPackagesPaged({
+    String? searchUsername,
+    String? searchPhone,
+    DocumentSnapshot? startAt,
+    int limit = 50,
+    required bool descending,
+  }) async {
+    try {
+      Query<PackageModel> query = _packageRef;
+
+      // 1. Filter by Phone (Exact) if provided
+      if (searchPhone != null && searchPhone.isNotEmpty) {
+        query = query.where(
+          Filter.or(
+            Filter('phone1', isEqualTo: searchPhone),
+            Filter('phone2', isEqualTo: searchPhone),
+          ),
+        );
+      }
+
+      // 2. Filter by Username (Prefix) if provided
+      // Chaining this with the phone filter above
+      if (searchUsername != null && searchUsername.isNotEmpty) {
+        query = query
+            .where('creatorUsername', isGreaterThanOrEqualTo: searchUsername)
+            .where('creatorUsername', isLessThanOrEqualTo: '$searchUsername\uf8ff');
+      }
+
+      // 3. Apply Sorting
+      // Note: If you search by username prefix, Firestore requires
+      // the first orderBy to be the same field (creatorUsername).
+      if (searchUsername != null && searchUsername.isNotEmpty) {
+        query = query.orderBy('creatorUsername');
+      }
+
+      query = query.orderBy('createdAt', descending: descending);
+
+      if (startAt != null) {
+        query = query.startAfterDocument(startAt);
+      }
+
+      return await query.limit(limit).get();
+    } catch (e) {
+      debugPrint("Admin Global Fetch Error: $e");
+      rethrow;
+    }
+  }
+
   Future<QuerySnapshot<PackageModel>> getAllPackagesPaged({
     String? exactPhone,
     String? status,

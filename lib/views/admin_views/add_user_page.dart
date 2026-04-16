@@ -2,6 +2,7 @@ import 'package:delivery_app/firestore/models/m_user.dart';
 import 'package:delivery_app/firestore/user_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:flutter/material.dart';
 
 class AddUserPage extends StatefulWidget {
@@ -72,6 +73,7 @@ class _AddUserPageState extends State<AddUserPage> {
 
       if (mounted) {
         _showSnackBar("Utilisateur ajouté !", DefaultColors.success);
+        RefreshNotifier().refreshCounter.value++;
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -200,13 +202,13 @@ class _AddUserPageState extends State<AddUserPage> {
                     borderRadius: BorderRadius.circular(20),
                     gradient: LinearGradient(
                       colors: [
-                        DefaultColors.primary.withOpacity(0.7),
+                        DefaultColors.primary.withValues(alpha: 0.7),
                         DefaultColors.primary,
                       ],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: DefaultColors.primary.withOpacity(0.3),
+                        color: DefaultColors.primary.withValues(alpha: 0.3),
                         offset: const Offset(0, 8),
                         blurRadius: 15,
                       ),

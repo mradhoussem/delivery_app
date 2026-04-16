@@ -1,6 +1,5 @@
 import 'package:delivery_app/dialogs/rd_print_save_package.dart';
 import 'package:delivery_app/firestore/enums/e_governorate.dart';
-import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
@@ -70,12 +69,14 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
     setState(() => _isLoading = true);
 
     try {
+      final String p2 = _phone2Controller.text.trim();
+
       // 1. Prepare the data
       final updatedData = {
         'firstName': _fNameController.text.trim(),
         'lastName': _lNameController.text.trim(),
         'phone1': _phone1Controller.text.trim(),
-        'phone2': _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
+        'phone2': p2.isEmpty ? null : p2,
         'governorate': _selectedGov,
         'address': _addressController.text.trim(),
         'amount': double.parse(_amountController.text.trim().replaceAll(',', '.')),
@@ -89,11 +90,9 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
 
       if (mounted) {
         // 3. Notify the list to refresh
-        RefreshNotifier().notifyRefresh();
+        RefreshNotifier().refreshCounter.value++;
 
-        // 4. Create a local instance of the updated package to pass to the printer
-        // We use widget.package.copyWith if you have that method,
-        // otherwise, manually create the model from the updated data.
+        // 4. Create a local instance of the updated package for the printer
         final updatedPackage = widget.package.copyWith(
           firstName: updatedData['firstName'] as String,
           lastName: updatedData['lastName'] as String,
@@ -107,15 +106,14 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
           comment: updatedData['comment'] as String?,
         );
 
-        // 5. Close the Update page first to avoid context issues
+        // 5. Close the Update page
         Navigator.pop(context);
 
-        // 6. Show the Print Dialog on the previous screen (Home/List)
-        // We use the root Navigator's context or a small delay to ensure the UI is ready
+        // 6. Show the Print Dialog
         RdPrintSavePackage.show(context, updatedPackage);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Colis mis à jour et prêt pour impression')),
+          const SnackBar(content: Text('Colis mis à jour avec succès')),
         );
       }
     } catch (e) {
@@ -133,10 +131,12 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
     return Scaffold(
       backgroundColor: DefaultColors.pagesBackground,
       appBar: AppBar(
-        title: const Text('Modifier le Colis', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: const Text('Modifier le Colis',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
@@ -151,7 +151,7 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
                   Expanded(
                     child: RwTextview(
                       controller: _fNameController,
-                      hint: 'Prénom',
+                      label: 'Prénom',
                       prefixIcon: Icons.person_outline,
                       validator: (v) => v!.isEmpty ? 'Requis' : null,
                     ),
@@ -160,7 +160,7 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
                   Expanded(
                     child: RwTextview(
                       controller: _lNameController,
-                      hint: 'Nom',
+                      label: 'Nom',
                       prefixIcon: Icons.person,
                       validator: (v) => v!.isEmpty ? 'Requis' : null,
                     ),
@@ -168,17 +168,29 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
                 ],
               ),
               const SizedBox(height: 15),
+              // Phone 1
               RwTextview(
                 controller: _phone1Controller,
-                hint: 'Téléphone 1',
+                label: 'Téléphone 1',
                 textNumeric: true,
                 prefixIcon: Icons.phone_iphone,
                 maxLength: 8,
                 validator: (v) => v!.isEmpty ? 'Requis' : null,
               ),
+              const SizedBox(height: 15),
+              // Phone 2 (Added)
+              RwTextview(
+                controller: _phone2Controller,
+                label: 'Téléphone 2 (Optionnel)',
+                textNumeric: true,
+                prefixIcon: Icons.phone_android,
+                maxLength: 8,
+              ),
+
               const SizedBox(height: 30),
               _buildSectionTitle('LIVRAISON'),
               RwDropdown(
+                label: "Gouvernorat",
                 value: _selectedGov,
                 items: EGovernorate.values.map((e) => e.name).toList(),
                 itemLabelBuilder: (name) => EGovernorateExtension.fromName(name).label,
@@ -187,14 +199,14 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
               const SizedBox(height: 15),
               RwTextview(
                 controller: _addressController,
-                hint: 'Adresse exacte',
+                label: 'Adresse exacte',
                 prefixIcon: Icons.location_on_outlined,
                 validator: (v) => v!.isEmpty ? 'Requis' : null,
               ),
               const SizedBox(height: 15),
               RwTextview(
                 controller: _amountController,
-                hint: 'Montant (TND)',
+                label: 'Montant (TND)',
                 textDouble: true,
                 prefixIcon: Icons.payments_outlined,
                 validator: (v) => v!.isEmpty ? 'Requis' : null,
@@ -204,7 +216,7 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
               const SizedBox(height: 15),
               RwTextview(
                 controller: _commentController,
-                hint: 'Remarque',
+                label: 'Remarque / Commentaire',
                 prefixIcon: Icons.textsms_outlined,
               ),
               const SizedBox(height: 40),
@@ -218,16 +230,27 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
 
   Widget _buildSectionTitle(String title) => Padding(
     padding: const EdgeInsets.only(bottom: 12, left: 4),
-    child: Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+    child: Text(title,
+        style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2
+        )),
   );
 
   Widget _buildExchangeSection() {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.black12)),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.black12)
+      ),
       child: Column(
         children: [
           SwitchListTile(
-            title: const Text('Échange de colis', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+            title: const Text('Échange de colis',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
             value: _isExchange,
             activeThumbColor: DefaultColors.primary,
             onChanged: (val) => setState(() {
@@ -237,10 +260,10 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
           ),
           if (_isExchange)
             Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: RwTextview(
                 controller: _designationController,
-                hint: 'Que doit-on récupérer ?',
+                label: 'Que doit-on récupérer ?',
                 prefixIcon: Icons.inventory_2_outlined,
                 validator: (v) => (_isExchange && v!.isEmpty) ? 'Requis' : null,
               ),
@@ -256,8 +279,16 @@ class _UpdatePackagePageState extends State<UpdatePackagePage> {
       height: 55,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _updateForm,
-        style: ElevatedButton.styleFrom(backgroundColor: DefaultColors.primary, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-        child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("ENREGISTRER LES MODIFICATIONS", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: DefaultColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          elevation: 2,
+        ),
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text("ENREGISTRER LES MODIFICATIONS",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
     );
   }

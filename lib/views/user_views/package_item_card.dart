@@ -10,8 +10,13 @@ import 'package:flutter/material.dart';
 
 class PackageItemCard extends StatelessWidget {
   final PackageModel package;
+  final bool showSender; // New Parameter
 
-  const PackageItemCard({super.key, required this.package});
+  const PackageItemCard({
+    super.key,
+    required this.package,
+    this.showSender = false, // Defaulted to false
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +47,9 @@ class PackageItemCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: Wrap(
-                alignment: WrapAlignment.spaceBetween, // Price left, buttons right
+                alignment: WrapAlignment.spaceBetween,
                 crossAxisAlignment: WrapCrossAlignment.center,
-                runAlignment: WrapAlignment.end,       // If they stack, align to the end (right)
+                runAlignment: WrapAlignment.end,
                 spacing: 20,
                 runSpacing: 12,
                 children: [
@@ -59,9 +64,8 @@ class PackageItemCard extends StatelessWidget {
                   ),
 
                   // --- Action Buttons Container ---
-                  // We wrap the buttons in an Align or another Wrap to force right-alignment
                   Wrap(
-                    alignment: WrapAlignment.end, // Forces buttons to stay right if stacked
+                    alignment: WrapAlignment.end,
                     spacing: 4,
                     children: [
                       if (package.status == EPackageStatus.waiting) ...[
@@ -77,7 +81,10 @@ class PackageItemCard extends StatelessWidget {
                           tooltip: "Editer",
                           onPressed: () => Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => UpdatePackagePage(package: package)),
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  UpdatePackagePage(package: package),
+                            ),
                           ),
                         ),
                       ],
@@ -85,7 +92,8 @@ class PackageItemCard extends StatelessWidget {
                         icon: Icons.print_outlined,
                         color: Colors.black87,
                         tooltip: "Imprimer",
-                        onPressed: () => RdPrintSavePackage.show(context, package),
+                        onPressed: () =>
+                            RdPrintSavePackage.show(context, package),
                       ),
                       _buildActionButton(
                         icon: Icons.visibility_outlined,
@@ -93,29 +101,53 @@ class PackageItemCard extends StatelessWidget {
                         tooltip: "Détails",
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => PackageDetailsPage(package: package)),
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PackageDetailsPage(package: package),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 
-  // --- REUSABLE WIDGETS ---
-
   Widget _buildInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // --- Added: Expéditeur Section (Conditional) ---
+        if (showSender) ...[
+          Row(
+            children: [
+              const Icon(
+                Icons.storefront,
+                size: 14,
+                color: DefaultColors.primary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                "Expéditeur: ${package.creatorUsername}",
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: DefaultColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+        ],
+
         Text(
           "${package.firstName} ${package.lastName}",
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         _infoRow(Icons.location_on_outlined, package.governorate.name),
@@ -165,7 +197,7 @@ class PackageItemCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: DefaultColors.primary.withOpacity(0.1),
+        color: DefaultColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
