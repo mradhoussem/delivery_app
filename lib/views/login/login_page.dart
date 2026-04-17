@@ -1,9 +1,10 @@
 import 'package:delivery_app/firestore/user_db.dart';
+import 'package:delivery_app/reusable_widgets/rw_textview.dart';
+import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/tools/images_files.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../reusable_widgets/rw_textview.dart';
-import '../tools/default_colors.dart';
+
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

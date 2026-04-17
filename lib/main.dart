@@ -1,17 +1,16 @@
 import 'package:delivery_app/auth_security/user_guard.dart';
-import 'package:delivery_app/login/login_admin_page.dart';
 import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/views/admin_views/admin_home_page.dart';
+import 'package:delivery_app/views/login/login_admin_page.dart';
+import 'package:delivery_app/views/login/login_page.dart';
 import 'package:delivery_app/views/user_views/user_home_page.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/gestures.dart'; // Required for PointerDeviceKind
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+
 import 'auth_security/admin_guard.dart';
 import 'firestore/firebase_options.dart';
-
-// Import your pages here
 import 'init/init_page.dart';
-import 'login/login_page.dart';
 
 // Custom Scroll Behavior to enable Mouse Dragging on Web/Desktop
 class MyCustomScrollBehavior extends MaterialScrollBehavior {

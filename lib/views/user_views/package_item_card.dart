@@ -11,13 +11,15 @@ import 'package:flutter/material.dart';
 class PackageItemCard extends StatelessWidget {
   final PackageModel package;
   final bool showSender;
-  final bool showReturnReceivedButton; // Nouveau paramètre
+  final bool showReturnReceivedButton;
+  final bool isAdmin;
 
   const PackageItemCard({
     super.key,
     required this.package,
     this.showSender = false,
-    this.showReturnReceivedButton = false, // Par défaut false
+    this.showReturnReceivedButton = false,
+    this.isAdmin = false,
   });
 
   @override
@@ -65,76 +67,42 @@ class PackageItemCard extends StatelessWidget {
                       alignment: WrapAlignment.end,
                       spacing: 4,
                       children: [
-                        // ✅ Bouton spécifique "Retour reçu"
-                        if (showReturnReceivedButton &&
-                            package.status == EPackageStatus.permanentReturn)
+                        // --- LOGIQUE ADMIN : Retour Dépôt -> Retour Définitif ---
+                        if (isAdmin && package.status == EPackageStatus.returnFromDeposit)
                           OutlinedButton.icon(
-                            onPressed: () async {
-                              // Affichage de la boîte de dialogue de confirmation
-                              final bool? confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text("Confirmer la réception"),
-                                  content: const Text(
-                                    "Voulez-vous marquer ce retour comme reçu ?",
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text(
-                                        "ANNULER",
-                                        style: TextStyle(color: Colors.black54),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text(
-                                        "CONFIRMER",
-                                        style: TextStyle(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-
-                              // Si l'utilisateur a confirmé, on exécute la mise à jour
-                              if (confirm == true) {
-                                await PackageDB().updateStatus(
-                                  package.id,
-                                  EPackageStatus.returnReceived,
-                                );
-                                RefreshNotifier().notifyRefresh();
-                              }
-                            },
-                            icon: const Icon(
-                              Icons.assignment_turned_in_outlined,
-                              size: 20,
+                            onPressed: () => _confirmAdminPermanentReturn(context),
+                            icon: const Icon(Icons.keyboard_double_arrow_right_rounded, size: 20),
+                            label: const Text(
+                              "RETOUR DÉFINITIF",
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.orange.shade800,
+                              backgroundColor: Colors.orange.shade50,
+                              side: BorderSide(color: Colors.orange.shade300),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            ),
+                          ),
+
+                        // --- LOGIQUE USER : Retour Définitif -> Retour Reçu ---
+                        if (!isAdmin && showReturnReceivedButton && package.status == EPackageStatus.permanentReturn)
+                          OutlinedButton.icon(
+                            onPressed: () => _confirmUserReturnReceived(context),
+                            icon: const Icon(Icons.assignment_turned_in_outlined, size: 20),
                             label: const Text(
                               "RETOUR REÇU",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.green.shade700,
                               backgroundColor: Colors.green.shade50,
                               side: BorderSide(color: Colors.green.shade300),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             ),
                           ),
+
                         if (package.status == EPackageStatus.waiting) ...[
                           _buildActionButton(
                             icon: Icons.delete_outline,
@@ -149,8 +117,7 @@ class PackageItemCard extends StatelessWidget {
                             onPressed: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) =>
-                                    UpdatePackagePage(package: package),
+                                builder: (_) => UpdatePackagePage(package: package),
                               ),
                             ),
                           ),
@@ -159,8 +126,7 @@ class PackageItemCard extends StatelessWidget {
                           icon: Icons.print_outlined,
                           color: Colors.black87,
                           tooltip: "Imprimer",
-                          onPressed: () =>
-                              RdPrintSavePackage.show(context, package),
+                          onPressed: () => RdPrintSavePackage.show(context, package),
                         ),
                         _buildActionButton(
                           icon: Icons.visibility_outlined,
@@ -169,8 +135,7 @@ class PackageItemCard extends StatelessWidget {
                           onPressed: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) =>
-                                  PackageDetailsPage(package: package),
+                              builder: (_) => PackageDetailsPage(package: package),
                             ),
                           ),
                         ),
@@ -186,6 +151,50 @@ class PackageItemCard extends StatelessWidget {
     );
   }
 
+  // Action réservée à l'ADMIN
+  Future<void> _confirmAdminPermanentReturn(BuildContext context) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Action Admin"),
+        content: const Text("Confirmez-vous le passage en 'Retour Définitif' pour ce colis ?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("ANNULER")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("CONFIRMER", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await PackageDB().updateStatus(package.id, EPackageStatus.permanentReturn);
+      RefreshNotifier().notifyRefresh();
+    }
+  }
+
+  // Action réservée à l'UTILISATEUR
+  Future<void> _confirmUserReturnReceived(BuildContext context) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Confirmation de réception"),
+        content: const Text("Avez-vous bien reçu le retour de ce colis ?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("NON")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("OUI, REÇU", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await PackageDB().updateStatus(package.id, EPackageStatus.returnReceived);
+      RefreshNotifier().notifyRefresh();
+    }
+  }
+
   Widget _buildInfo() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,19 +202,11 @@ class PackageItemCard extends StatelessWidget {
         if (showSender) ...[
           Row(
             children: [
-              const Icon(
-                Icons.storefront,
-                size: 14,
-                color: DefaultColors.primary,
-              ),
+              const Icon(Icons.storefront, size: 14, color: DefaultColors.primary),
               const SizedBox(width: 4),
               Text(
                 "Expéditeur: ${package.creatorUsername}",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: DefaultColors.primary,
-                ),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: DefaultColors.primary),
               ),
             ],
           ),
@@ -218,10 +219,7 @@ class PackageItemCard extends StatelessWidget {
         const SizedBox(height: 8),
         _infoRow(Icons.location_on_outlined, package.governorate.name),
         const SizedBox(height: 4),
-        _infoRow(
-          Icons.phone_outlined,
-          "${package.phone1}${package.phone2 != null ? ' / ${package.phone2}' : ''}",
-        ),
+        _infoRow(Icons.phone_outlined, "${package.phone1}${package.phone2 != null ? ' / ${package.phone2}' : ''}"),
       ],
     );
   }
@@ -232,31 +230,14 @@ class PackageItemCard extends StatelessWidget {
         Icon(icon, size: 16, color: DefaultColors.textSecondary),
         const SizedBox(width: 6),
         Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              color: DefaultColors.textSecondary,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
+          child: Text(text, style: const TextStyle(fontSize: 14, color: DefaultColors.textSecondary), overflow: TextOverflow.ellipsis),
         ),
       ],
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required Color color,
-    required String tooltip,
-    required VoidCallback onPressed,
-  }) {
-    return IconButton(
-      onPressed: onPressed,
-      tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
-      icon: Icon(icon, color: color, size: 26),
-    );
+  Widget _buildActionButton({required IconData icon, required Color color, required String tooltip, required VoidCallback onPressed}) {
+    return IconButton(onPressed: onPressed, tooltip: tooltip, visualDensity: VisualDensity.compact, icon: Icon(icon, color: color, size: 26));
   }
 
   Widget _buildStatusBadge(EPackageStatus status) {
@@ -268,14 +249,7 @@ class PackageItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: baseColor.withValues(alpha: 0.2), width: 1),
       ),
-      child: Text(
-        status.label.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: baseColor,
-        ),
-      ),
+      child: Text(status.label.toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: baseColor)),
     );
   }
 
@@ -286,20 +260,8 @@ class PackageItemCard extends StatelessWidget {
         title: const Text("Supprimer l'expédition"),
         content: const Text("Voulez-vous vraiment supprimer ce colis ?"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text(
-              "ANNULER",
-              style: TextStyle(color: Colors.black54),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              "SUPPRIMER",
-              style: TextStyle(color: DefaultColors.error),
-            ),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("ANNULER")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("SUPPRIMER", style: TextStyle(color: DefaultColors.error))),
         ],
       ),
     );

@@ -4,10 +4,11 @@ import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_empty_packages.dart';
+import 'package:delivery_app/reusable_widgets/rw_expandable_widget.dart';
 import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:delivery_app/views/user_views/package_payed_item_card.dart';
 import 'package:flutter/material.dart';
-import 'package:delivery_app/tools/refresh_notifier.dart';
 
 class PackagesPayedListPage extends StatefulWidget {
   final String userId;
@@ -30,21 +31,14 @@ class _PackagesPayedListPageState extends State<PackagesPayedListPage> {
 
   final List<String> _years = List.generate(
     5,
-    (index) => (DateTime.now().year - index).toString(),
+        (index) =>
+        (DateTime
+            .now()
+            .year - index).toString(),
   );
   final List<String> _months = [
-    "Janvier",
-    "Février",
-    "Mars",
-    "Avril",
-    "Mai",
-    "Juin",
-    "Juillet",
-    "Août",
-    "Septembre",
-    "Octobre",
-    "Novembre",
-    "Décembre",
+    "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+    "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
   ];
 
   late String _selectedYear;
@@ -179,30 +173,38 @@ class _PackagesPayedListPageState extends State<PackagesPayedListPage> {
       backgroundColor: DefaultColors.pagesBackground,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // ✅ Seuil pour le mode "Web" ou Ecran Large
           bool isWideScreen = constraints.maxWidth > 900;
 
           return Column(
             children: [
-              if (isWideScreen)
-                // --- MODE WEB : Filtres et Tableau côte à côte ---
+              // 1. RW EXPANDABLE (Contient Header sur Mobile, Header + Table sur Web)
+              RwExpandableWidget(
+                child: isWideScreen
+                    ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 3, child: _buildHeader(isWideScreen)),
+                    const SizedBox(width: 20),
+                    Expanded(flex: 2, child: _buildSummaryTable()),
+                  ],
+                )
+                    : _buildHeader(isWideScreen),
+              ),
+
+              // 2. MODE MOBILE : Summary Table à l'extérieur (toujours visible)
+              if (!isWideScreen)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end ,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(flex: 3, child: _buildHeader()),
-                      const SizedBox(width: 20),
-                      Expanded(flex: 2, child: _buildSummaryTable()),
-                    ],
-                  ),
-                )
-              else
-                // --- MODE MOBILE : L'un sous l'autre ---
-                Column(children: [_buildHeader(), _buildSummaryTable()]),
-              const Divider(),
-              Expanded(child: _buildBody()),
+                  child: _buildSummaryTable(),
+                ),
+
+              const Divider(height: 1),
+
+              // 3. LA LISTE (BODY)
+              Expanded(
+                child: _buildBody(),
+              ),
+
               if (_allPackages.isNotEmpty) _buildPagination(),
             ],
           );
@@ -214,10 +216,8 @@ class _PackagesPayedListPageState extends State<PackagesPayedListPage> {
   Widget _buildSummaryTable() {
     if (_isTotalsLoading) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(
-          child: SizedBox(width: 100, child: LinearProgressIndicator()),
-        ),
+        padding: EdgeInsets.symmetric(vertical: 30),
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
     }
 
@@ -226,155 +226,130 @@ class _PackagesPayedListPageState extends State<PackagesPayedListPage> {
     final delivery = _monthlyTotals?['totalDelivery'] ?? 0.0;
     final net = _monthlyTotals?['net'] ?? 0.0;
 
-    return SelectionArea(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-      
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Text(
-                "RÉCAPITULATIF : $_selectedMonth $_selectedYear",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: Colors.blueGrey,
-                ),
-              ),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              "RÉCAPITULATIF : $_selectedMonth $_selectedYear".toUpperCase(),
+              style: const TextStyle(fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  color: Colors.blueGrey),
             ),
-            Table(
-              border: TableBorder.symmetric(
-                inside: BorderSide(color: Colors.grey.shade400, width: 1),
-                  outside: BorderSide(color: Colors.grey.shade400, width: 1),
-              ),
-              children: [
-                _buildTableRow("Total Colis", "$count", isBold: true),
-                _buildTableRow("Contre remboursement", total.toStringAsFixed(3)),
-                _buildTableRow(
-                  "Livraison",
-                  "- ${delivery.toStringAsFixed(3)}",
-                  valueColor: Colors.red,
-                ),
-                _buildTableRow(
-                  "Net",
-                  net.toStringAsFixed(3),
-                  valueColor: Colors.green,
-                  isLast: true,
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          Table(
+            border: TableBorder.all(color: Colors.grey.shade200, width: 1),
+            children: [
+              _buildTableRow("Total Colis", "$count", isBold: true),
+              _buildTableRow("Contre remboursement", total.toStringAsFixed(3)),
+              _buildTableRow(
+                  "Frais Livraison", "- ${delivery.toStringAsFixed(3)}",
+                  valueColor: Colors.red),
+              _buildTableRow("NET À PAYER", net.toStringAsFixed(3),
+                  valueColor: Colors.green, isLast: true),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  TableRow _buildTableRow(
-    String label,
-    String value, {
-    bool isBold = false,
-    Color? valueColor,
-    bool isLast = false,
-  }) {
+  TableRow _buildTableRow(String label, String value,
+      {bool isBold = false, Color? valueColor, bool isLast = false}) {
     return TableRow(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isLast || isBold
-                  ? FontWeight.bold
-                  : FontWeight.normal,
-            ),
-          ),
+          padding: const EdgeInsets.all(10),
+          child: Text(label, style: TextStyle(fontSize: 11,
+              fontWeight: isLast || isBold ? FontWeight.bold : FontWeight
+                  .normal)),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          padding: const EdgeInsets.all(10),
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-              color: valueColor ?? DefaultColors.textPrimary,
-            ),
+            style: TextStyle(fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: valueColor ?? DefaultColors.textPrimary),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Mes paiements",
-            style: TextStyle(
-              fontSize: 24,
+  Widget _buildHeader(bool isWideScreen) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Mes paiements",
+          style: TextStyle(fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: DefaultColors.textPrimary,
+              color: DefaultColors.textPrimary),
+        ),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(
+              child: RwDropdown(
+                label: "Année",
+                value: _selectedYear,
+                items: _years,
+                onChanged: (val) {
+                  if (val != null && val != _selectedYear) {
+                    setState(() => _selectedYear = val);
+                    _resetAndReload();
+                  }
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: RwDropdown(
-                  label: "Année",
-                  value: _selectedYear,
-                  items: _years,
-                  onChanged: (val) {
-                    if (val != null && val != _selectedYear) {
-                      setState(() => _selectedYear = val);
-                      _resetAndReload();
-                    }
-                  },
-                ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: RwDropdown(
+                label: "Mois",
+                value: _selectedMonth,
+                items: _months,
+                onChanged: (val) {
+                  if (val != null && val != _selectedMonth) {
+                    setState(() => _selectedMonth = val);
+                    _resetAndReload();
+                  }
+                },
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: RwDropdown(
-                  label: "Mois",
-                  value: _selectedMonth,
-                  items: _months,
-                  onChanged: (val) {
-                    if (val != null && val != _selectedMonth) {
-                      setState(() => _selectedMonth = val);
-                      _resetAndReload();
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          RwDropdown(
-            label: "Trier",
-            value: _isDescending ? 'décroissant' : 'croissant',
-            items: const ['décroissant', 'croissant'],
-            itemLabelBuilder: (val) =>
-                val == 'décroissant' ? "Plus récent" : "Plus ancien",
-            onChanged: (String? newValue) {
-              if (newValue != null) {
-                bool newStatus = (newValue == 'décroissant');
-                if (newStatus != _isDescending) {
-                  setState(() => _isDescending = newStatus);
-                  _resetAndReload();
-                }
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        RwDropdown(
+          label: "Trier",
+          value: _isDescending ? 'décroissant' : 'croissant',
+          items: const ['décroissant', 'croissant'],
+          itemLabelBuilder: (val) =>
+          val == 'décroissant'
+              ? "Plus récent"
+              : "Plus ancien",
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              bool newStatus = (newValue == 'décroissant');
+              if (newStatus != _isDescending) {
+                setState(() => _isDescending = newStatus);
+                _resetAndReload();
               }
-            },
-          ),
-        ],
-      ),
+            }
+          },
+        ),
+      ],
     );
   }
 
@@ -384,7 +359,7 @@ class _PackagesPayedListPageState extends State<PackagesPayedListPage> {
     if (_allPackages.isEmpty) return const EmptyStateWidget();
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: _allPackages.length,
       itemBuilder: (_, i) => PackagePayedItemCard(package: _allPackages[i]),
     );
@@ -402,26 +377,19 @@ class _PackagesPayedListPageState extends State<PackagesPayedListPage> {
           SizedBox(
             width: 100,
             child: _currentPage > 1
-                ? TextButton(
-                    onPressed: () => _fetchPage(_currentPage - 1),
-                    child: const Text('Précédent'),
-                  )
+                ? TextButton(onPressed: () => _fetchPage(_currentPage - 1),
+                child: const Text('Précédent'))
                 : null,
           ),
           Expanded(
-            child: Text(
-              'Page $_currentPage',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            child: Text('Page $_currentPage', textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           SizedBox(
             width: 100,
             child: _hasMore
-                ? TextButton(
-                    onPressed: () => _fetchPage(_currentPage + 1),
-                    child: const Text('Suivant'),
-                  )
+                ? TextButton(onPressed: () => _fetchPage(_currentPage + 1),
+                child: const Text('Suivant'))
                 : null,
           ),
         ],
@@ -435,11 +403,8 @@ class _CachedPage {
   final bool hasMore;
   final DateTime cachedAt;
 
-  _CachedPage({
-    required this.packages,
-    required this.hasMore,
-    required this.cachedAt,
-  });
+  _CachedPage(
+      {required this.packages, required this.hasMore, required this.cachedAt});
 
   bool get isExpired =>
       DateTime.now().difference(cachedAt) > const Duration(minutes: 5);

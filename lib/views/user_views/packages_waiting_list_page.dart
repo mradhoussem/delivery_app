@@ -7,13 +7,13 @@ import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/init/loading_overlay.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_empty_packages.dart';
+import 'package:delivery_app/reusable_widgets/rw_expandable_widget.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
-import 'package:delivery_app/views/user_views/package_item_card.dart';
-import 'package:flutter/material.dart';
-
 // 1. Import your refresh notifier
 import 'package:delivery_app/tools/refresh_notifier.dart';
+import 'package:delivery_app/views/user_views/package_item_card.dart';
+import 'package:flutter/material.dart';
 
 class PackagesWaitingListPage extends StatefulWidget {
   final String userId;
@@ -54,8 +54,6 @@ class _PackagesWaitingListPageState extends State<PackagesWaitingListPage> {
     // 3. Listen for global refresh events (e.g. from AddPackagePage)
     RefreshNotifier().refreshCounter.addListener(_resetAndReload);
 
-    // Note: We DO NOT call _fetchPage(1) here anymore.
-    // It will be triggered by the UserHomePage visibility logic.
   }
 
   @override
@@ -191,7 +189,7 @@ class _PackagesWaitingListPageState extends State<PackagesWaitingListPage> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -204,89 +202,97 @@ class _PackagesWaitingListPageState extends State<PackagesWaitingListPage> {
             ),
           ),
           const SizedBox(height: 15),
-          Row(
-            children: [
-              Expanded(
-                child: RwTextview(
-                  controller: _searchController,
-                  backgroundColor: Colors.white,
-                  hint: 'Rechercher Tél 1 ou Tél 2...',
-                  textNumeric: true,
-                  prefixIcon: Icons.phone_iphone,
-                  iconColor: Colors.blue,
-                  maxLength: 12,
-                ),
-              ),
-              const SizedBox(width: 8),
-              _iconButton(Icons.search, _onSearchPressed),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: RwDropdown(
-                  label: "Trier par date",
-                  prefixIcon: Icons.sort,
-                  iconColor: Colors.blueGrey,
-                  value: _isDescending ? 'décroissant' : 'croissant',
-                  items: _sortOptions,
-                  itemLabelBuilder: (val) => val == 'décroissant'
-                      ? "Plus récent (Nouveau → Ancien)"
-                      : "Plus ancien (Ancien → Nouveau)",
-                  onChanged: (String? newValue) {
-                    if (newValue == null) return;
-                    final shouldBeDesc = (newValue == 'décroissant');
-                    if (shouldBeDesc != _isDescending) {
-                      setState(() => _isDescending = shouldBeDesc);
-                      _resetAndReload();
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                margin: const EdgeInsets.only(top: 25),
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: DefaultColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 22,
-                      horizontal: 20,
+          RwExpandableWidget(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: RwTextview(
+                        controller: _searchController,
+                        backgroundColor: Colors.white,
+                        hint: 'Rechercher Tél 1 ou Tél 2...',
+                        textNumeric: true,
+                        prefixIcon: Icons.phone_iphone,
+                        iconColor: Colors.blue,
+                        maxLength: 12,
+                      ),
                     ),
-                  ),
-                  onPressed: _isPrinting
-                      ? null
-                      : () async {
-                          setState(() => _isPrinting = true);
-                          try {
-                            if (mounted) LoadingOverlay.show(context);
-                            final allPackages = await _db
-                                .getAllPackagesByStatus(
-                                  userId: widget.userId,
-                                  status: _status,
-                                );
-                            await Future.delayed(
-                              const Duration(milliseconds: 300),
-                            );
-                            if (!mounted) return;
-                            LoadingOverlay.hide(context);
-                            await RdPrintSaveWaitingPackages.show(
-                              context,
-                              allPackages,
-                            );
-                          } catch (e) {
-                            if (mounted) LoadingOverlay.hide(context);
-                          } finally {
-                            if (mounted) setState(() => _isPrinting = false);
+                    const SizedBox(width: 8),
+                    _iconButton(Icons.search, _onSearchPressed),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RwDropdown(
+                        label: "Trier par date",
+                        prefixIcon: Icons.sort,
+                        iconColor: Colors.blueGrey,
+                        value: _isDescending ? 'décroissant' : 'croissant',
+                        items: _sortOptions,
+                        itemLabelBuilder: (val) => val == 'décroissant'
+                            ? "Plus récent (Nouveau → Ancien)"
+                            : "Plus ancien (Ancien → Nouveau)",
+                        onChanged: (String? newValue) {
+                          if (newValue == null) return;
+                          final shouldBeDesc = (newValue == 'décroissant');
+                          if (shouldBeDesc != _isDescending) {
+                            setState(() => _isDescending = shouldBeDesc);
+                            _resetAndReload();
                           }
                         },
-                  icon: const Icon(Icons.print),
-                  label: const Text("Imprimer Manifeste"),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      margin: const EdgeInsets.only(top: 25),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: DefaultColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 22,
+                            horizontal: 20,
+                          ),
+                        ),
+                        onPressed: _isPrinting
+                            ? null
+                            : () async {
+                                setState(() => _isPrinting = true);
+                                try {
+                                  if (mounted) LoadingOverlay.show(context);
+                                  final allPackages = await _db
+                                      .getAllPackagesByStatus(
+                                        userId: widget.userId,
+                                        status: _status,
+                                      );
+                                  await Future.delayed(
+                                    const Duration(milliseconds: 300),
+                                  );
+                                  if (!mounted) return;
+                                  LoadingOverlay.hide(context);
+                                  await RdPrintSaveWaitingPackages.show(
+                                    context,
+                                    allPackages,
+                                  );
+                                } catch (e) {
+                                  if (mounted) LoadingOverlay.hide(context);
+                                } finally {
+                                  if (mounted) {
+                                    setState(() => _isPrinting = false);
+                                  }
+                                }
+                              },
+                        icon: const Icon(Icons.print),
+                        label: const Text("Imprimer Manifeste"),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

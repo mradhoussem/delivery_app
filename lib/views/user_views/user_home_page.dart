@@ -76,13 +76,8 @@ class _UserHomePageState extends State<UserHomePage> {
       ),
       RwSideBarItem(
         title: "Mes retours",
-        icon: Icons.monetization_on,
+        icon: Icons.inventory_outlined,
         page: PackagesReceivedListPage(userId: _userid!),
-      ),
-      RwSideBarItem(
-        title: "Paramètres",
-        icon: Icons.settings,
-        page: const Center(child: Text("Paramètres")),
       ),
     ];
   }

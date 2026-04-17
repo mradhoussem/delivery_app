@@ -1,8 +1,8 @@
-import 'package:delivery_app/tools/images_files.dart';
-import 'package:flutter/material.dart';
 import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/tools/images_files.dart';
 import 'package:delivery_app/views/user_views/add_package_page.dart';
 import 'package:delivery_app/views/user_views/packages_stats_page.dart';
+import 'package:flutter/material.dart';
 
 class DashboardUserPage extends StatelessWidget {
   final String userId;
@@ -83,7 +83,8 @@ class DashboardUserPage extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: DefaultColors.primary,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 25, vertical: 20),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
                           child: const Text("COMMENCER"),

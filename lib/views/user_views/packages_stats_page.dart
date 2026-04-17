@@ -17,28 +17,44 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
   final PackageDB _db = PackageDB();
   Map<EPackageStatus, int> _counts = {};
   int _totalCount = 0;
-  bool _isLoading = true;
+  bool _isLoading = false; // Initialisé à false car on attend l'init manuel
+
+  // 1. Variable pour suivre l'initialisation
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // Listen for global refreshes
+    // 2. Écouter les rafraîchissements globaux
     RefreshNotifier().refreshCounter.addListener(_loadStats);
-    _loadStats();
   }
 
   @override
   void dispose() {
+    // 3. Nettoyage de l'écouteur
     RefreshNotifier().refreshCounter.removeListener(_loadStats);
     super.dispose();
   }
 
+  // 4. MÉTHODE DE RÉFÉRENCE : Appellée par le parent quand l'onglet devient visible
+  void initDataIfNeeded() {
+    if (!_isInitialized) {
+      _loadStats();
+      _isInitialized = true;
+    }
+  }
+
   Future<void> _loadStats() async {
+    // Si on est déjà en train de charger, on ignore l'appel
+    if (_isLoading && _isInitialized) return;
+
+    if (mounted) setState(() => _isLoading = true);
+
     try {
       final results = await Future.wait([
         _db.getPackageCountByStatus(userId: widget.userId),
         ...EPackageStatus.values.map(
-          (s) => _db.getPackageCountByStatus(
+              (s) => _db.getPackageCountByStatus(
             userId: widget.userId,
             status: s.name,
           ),
@@ -56,13 +72,21 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
         });
       }
     } catch (e) {
+      debugPrint("Erreur Stats: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    // 5. Sécurité : Initialisation automatique si build est appelé
+    if (!_isInitialized) {
+      initDataIfNeeded();
+    }
+
+    if (_isLoading && _totalCount == 0) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +105,7 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
           spacing: 15,
           runSpacing: 15,
           children: [
-            // Total Card with specific colors requested
+            // Total Card
             RwFlipCard(
               title: "Total Expéditions",
               value: _totalCount.toString(),
@@ -91,11 +115,10 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
 
             // Status Cards mapped dynamically
             ...EPackageStatus.values.map(
-              (status) => RwFlipCard(
+                  (status) => RwFlipCard(
                 title: status.label,
                 value: (_counts[status] ?? 0).toString(),
                 gradientColors: status.gradientColors,
-                // Now using the extension property
                 onTap: () => (),
               ),
             ),

@@ -4,6 +4,7 @@ import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_empty_packages.dart';
+import 'package:delivery_app/reusable_widgets/rw_expandable_widget.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/tools/refresh_notifier.dart';
@@ -12,7 +13,6 @@ import 'package:flutter/material.dart';
 
 class PackagesListPage extends StatefulWidget {
   final String userId;
-
   const PackagesListPage({super.key, required this.userId});
 
   @override
@@ -23,42 +23,35 @@ class _PackagesListPageState extends State<PackagesListPage> {
   final PackageDB _db = PackageDB();
   final TextEditingController _searchController = TextEditingController();
 
-  // Cache and Pagination tracking
   final Map<String, _CachedPage> _cache = {};
   final List<DocumentSnapshot?> _pageStarts = [null];
 
   List<PackageModel> _allPackages = [];
   final List<String> _sortOptions = ['décroissant', 'croissant'];
+
   String? _lastPhone;
   int _currentPage = 1;
   bool _hasMore = true;
   bool _isLoading = false;
   bool _hasError = false;
-
-  // TRI PAR DATE: true = Décroissant (Newest), false = Croissant (Oldest)
   bool _isDescending = true;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onPhoneTextChanged);
-
-    // Listen for global refreshes
     RefreshNotifier().refreshCounter.addListener(_resetAndReload);
-
-    _fetchPage(1); // Now this only runs when UserHomePage activates this widget
+    // Lancement initial
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchPage(1));
   }
 
   @override
   void dispose() {
     _searchController.removeListener(_onPhoneTextChanged);
     _searchController.dispose();
-    // Clean up listener
     RefreshNotifier().refreshCounter.removeListener(_resetAndReload);
     super.dispose();
   }
-
-  // --- Logic ---
 
   void _onPhoneTextChanged() {
     final text = _searchController.text.trim();
@@ -75,7 +68,6 @@ class _PackagesListPageState extends State<PackagesListPage> {
     _resetAndReload();
   }
 
-  // On ajoute le sens du tri dans la clé du cache pour éviter les conflits
   String _cacheKey(int page) => '${_lastPhone ?? ""}|$page|$_isDescending';
 
   Future<void> _fetchPage(int page) async {
@@ -83,31 +75,34 @@ class _PackagesListPageState extends State<PackagesListPage> {
 
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
-      setState(() => _hasError = true);
+      if (mounted) setState(() => _hasError = true);
       return;
     }
 
     final key = _cacheKey(page);
     if (_cache.containsKey(key) && !_cache[key]!.isExpired) {
       final hit = _cache[key]!;
-      setState(() {
-        _allPackages = hit.packages;
-        _hasMore = hit.hasMore;
-        _currentPage = page;
-        _hasError = false;
-      });
+      if (mounted) {
+        setState(() {
+          _allPackages = hit.packages;
+          _hasMore = hit.hasMore;
+          _currentPage = page;
+          _hasError = false;
+        });
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+      });
+    }
 
     try {
       final phone = _searchController.text.trim();
 
-      // Appel DB avec le paramètre descending
       final snapshot = await _db.getPackagesByUserPaged(
         userId: widget.userId,
         exactPhone: phone.isEmpty ? null : phone,
@@ -127,26 +122,26 @@ class _PackagesListPageState extends State<PackagesListPage> {
       _cache[key] = _CachedPage(
         packages: items,
         hasMore: hasMore,
-        nextCursor: hasMore ? docs.last : null,
         cachedAt: DateTime.now(),
       );
 
-      setState(() {
-        _allPackages = items;
-        _hasMore = hasMore;
-        _currentPage = page;
-      });
+      if (mounted) {
+        setState(() {
+          _allPackages = items;
+          _hasMore = hasMore;
+          _currentPage = page;
+        });
+      }
     } catch (e) {
       debugPrint('FIRESTORE ERROR: $e');
-      setState(() => _hasError = true);
+      if (mounted) setState(() => _hasError = true);
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void _resetAndReload() {
+    if (!mounted) return;
     setState(() {
       _cache.clear();
       _pageStarts.clear();
@@ -157,7 +152,6 @@ class _PackagesListPageState extends State<PackagesListPage> {
     _fetchPage(1);
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,69 +159,84 @@ class _PackagesListPageState extends State<PackagesListPage> {
       body: Column(
         children: [
           _buildHeader(),
-          Divider(),
+          const Divider(),
           Expanded(child: _buildBody()),
-          if (_allPackages.isNotEmpty) _buildPagination(),        ],
+          if (_allPackages.isNotEmpty) _buildPagination(),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Toutes les Colis",
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: DefaultColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 15),
-          // Search Row
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: RwTextview(
-                  controller: _searchController,
-                  backgroundColor: Colors.white,
-                  hint: 'Rechercher Tél 1 ou Tél 2...',
-                  textNumeric: true,
-                  prefixIcon: Icons.phone_iphone,
-                  iconColor: Colors.blue,
-                  maxLength: 12,
+              const Text(
+                "Toutes les Colis",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: DefaultColors.textPrimary,
                 ),
               ),
-              const SizedBox(width: 8),
-              _iconButton(Icons.search, _onSearchPressed),
+              IconButton(
+                onPressed: _isLoading ? null : _resetAndReload,
+                icon: _isLoading
+                    ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.refresh, color: DefaultColors.primary),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          // 3. Add the RwDropdown for sorting
-          RwDropdown(
-            label: "Trier par date",
-            prefixIcon: Icons.sort,
-            iconColor: Colors.blueGrey,
-            // Map technical bool to our list items
-            value: _isDescending ? 'décroissant' : 'croissant',
-            items: _sortOptions,
-            itemLabelBuilder: (val) => val == 'décroissant'
-                ? "Plus récent (Nouveau → Ancien)"
-                : "Plus ancien (Ancien → Nouveau)",
-            onChanged: (String? newValue) {
-              if (newValue == null) return;
-              if (_allPackages.length <= 1) return;
-              final shouldBeDesc = (newValue == 'décroissant');
-              if (shouldBeDesc != _isDescending) {
-                setState(() {
-                  _isDescending = shouldBeDesc;
-                });
-                _resetAndReload();
-              }
-            },
+          const SizedBox(height: 15),
+          RwExpandableWidget(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: RwTextview(
+                        controller: _searchController,
+                        backgroundColor: Colors.white,
+                        hint: 'Rechercher Tél 1 ou Tél 2...',
+                        textNumeric: true,
+                        prefixIcon: Icons.phone_iphone,
+                        iconColor: Colors.blue,
+                        maxLength: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _iconButton(Icons.search, _onSearchPressed),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                RwDropdown(
+                  label: "Trier par date",
+                  prefixIcon: Icons.sort,
+                  iconColor: Colors.blueGrey,
+                  value: _isDescending ? 'décroissant' : 'croissant',
+                  items: _sortOptions,
+                  itemLabelBuilder: (val) => val == 'décroissant'
+                      ? "Plus récent (Nouveau → Ancien)"
+                      : "Plus ancien (Ancien → Nouveau)",
+                  onChanged: (String? newValue) {
+                    if (newValue == null) return;
+                    final shouldBeDesc = (newValue == 'décroissant');
+                    if (shouldBeDesc != _isDescending) {
+                      setState(() => _isDescending = shouldBeDesc);
+                      _resetAndReload();
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -235,21 +244,18 @@ class _PackagesListPageState extends State<PackagesListPage> {
   }
 
   Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_hasError) {
-      return _buildErrorState();
-    }
-    if (_allPackages.isEmpty) {
-      return EmptyStateWidget(
-      );
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_hasError) return _buildErrorState();
+    if (_allPackages.isEmpty) return const EmptyStateWidget();
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: _allPackages.length,
-      itemBuilder: (_, i) => PackageItemCard(package: _allPackages[i]),
+      itemBuilder: (_, i) => PackageItemCard(
+        package: _allPackages[i],
+        showReturnReceivedButton: true, // Autorise le bouton de réception
+        isAdmin: false, // Vue utilisateur
+      ),
     );
   }
 
@@ -266,10 +272,10 @@ class _PackagesListPageState extends State<PackagesListPage> {
             width: 120,
             child: _currentPage > 1
                 ? TextButton.icon(
-                    onPressed: () => _fetchPage(_currentPage - 1),
-                    icon: const Icon(Icons.arrow_back_ios, size: 16),
-                    label: const Text('Précédent'),
-                  )
+              onPressed: () => _fetchPage(_currentPage - 1),
+              icon: const Icon(Icons.arrow_back_ios, size: 16),
+              label: const Text('Précédent'),
+            )
                 : null,
           ),
           Expanded(
@@ -283,10 +289,10 @@ class _PackagesListPageState extends State<PackagesListPage> {
             width: 120,
             child: _hasMore
                 ? TextButton.icon(
-                    onPressed: () => _fetchPage(_currentPage + 1),
-                    icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                    label: const Text('Suivant'),
-                  )
+              onPressed: () => _fetchPage(_currentPage + 1),
+              icon: const Icon(Icons.arrow_forward_ios, size: 16),
+              label: const Text('Suivant'),
+            )
                 : null,
           ),
         ],
@@ -312,25 +318,17 @@ class _PackagesListPageState extends State<PackagesListPage> {
     );
   }
 
-  Widget _iconButton(
-    IconData icon,
-    VoidCallback onTap, {
-    Color? color,
-    String? tooltip,
-  }) {
-    return Tooltip(
-      message: tooltip ?? "",
-      child: Container(
-        height: 50,
-        width: 50,
-        decoration: BoxDecoration(
-          color: color ?? DefaultColors.primary,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: IconButton(
-          icon: Icon(icon, color: Colors.white),
-          onPressed: onTap,
-        ),
+  Widget _iconButton(IconData icon, VoidCallback onTap, {Color? color}) {
+    return Container(
+      height: 50,
+      width: 50,
+      decoration: BoxDecoration(
+        color: color ?? DefaultColors.primary,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: Colors.white),
+        onPressed: onTap,
       ),
     );
   }
@@ -339,16 +337,7 @@ class _PackagesListPageState extends State<PackagesListPage> {
 class _CachedPage {
   final List<PackageModel> packages;
   final bool hasMore;
-  final DocumentSnapshot? nextCursor;
   final DateTime cachedAt;
-
-  const _CachedPage({
-    required this.packages,
-    required this.hasMore,
-    required this.cachedAt,
-    this.nextCursor,
-  });
-
-  bool get isExpired =>
-      DateTime.now().difference(cachedAt) > const Duration(minutes: 5);
+  const _CachedPage({required this.packages, required this.hasMore, required this.cachedAt});
+  bool get isExpired => DateTime.now().difference(cachedAt) > const Duration(minutes: 5);
 }

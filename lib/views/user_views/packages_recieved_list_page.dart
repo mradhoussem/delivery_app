@@ -5,20 +5,19 @@ import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_empty_packages.dart';
+import 'package:delivery_app/reusable_widgets/rw_expandable_widget.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:delivery_app/views/user_views/package_item_card.dart';
 import 'package:flutter/material.dart';
-import 'package:delivery_app/tools/refresh_notifier.dart';
 
 class PackagesReceivedListPage extends StatefulWidget {
   final String userId;
-
   const PackagesReceivedListPage({super.key, required this.userId});
 
   @override
-  State<PackagesReceivedListPage> createState() =>
-      _PackagesReceivedListPageState();
+  State<PackagesReceivedListPage> createState() => _PackagesReceivedListPageState();
 }
 
 class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
@@ -37,12 +36,10 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
   bool _isLoading = false;
   bool _hasError = false;
   bool _isDescending = true;
-  bool _isInitialized = false;
 
-  // Liste des statuts à afficher sur cette page
   static const List<EPackageStatus> _statuses = [
     EPackageStatus.permanentReturn,
-    EPackageStatus.returnReceived
+    EPackageStatus.returnReceived,
   ];
 
   @override
@@ -50,6 +47,7 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
     super.initState();
     _searchController.addListener(_onPhoneTextChanged);
     RefreshNotifier().refreshCounter.addListener(_resetAndReload);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _fetchPage(1));
   }
 
   @override
@@ -58,13 +56,6 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
     RefreshNotifier().refreshCounter.removeListener(_resetAndReload);
     _searchController.dispose();
     super.dispose();
-  }
-
-  void initDataIfNeeded() {
-    if (!_isInitialized) {
-      _fetchPage(1);
-      _isInitialized = true;
-    }
   }
 
   void _onPhoneTextChanged() {
@@ -90,26 +81,30 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
 
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
-      setState(() => _hasError = true);
+      if (mounted) setState(() => _hasError = true);
       return;
     }
 
     final key = _cacheKey(page);
     if (_cache.containsKey(key) && !_cache[key]!.isExpired) {
       final hit = _cache[key]!;
-      setState(() {
-        _allPackages = hit.packages;
-        _hasMore = hit.hasMore;
-        _currentPage = page;
-        _hasError = false;
-      });
+      if (mounted) {
+        setState(() {
+          _allPackages = hit.packages;
+          _hasMore = hit.hasMore;
+          _currentPage = page;
+          _hasError = false;
+        });
+      }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-      _hasError = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+      });
+    }
 
     try {
       final phone = _searchController.text.trim();
@@ -137,14 +132,16 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
         cachedAt: DateTime.now(),
       );
 
-      setState(() {
-        _allPackages = items;
-        _hasMore = hasMore;
-        _currentPage = page;
-      });
+      if (mounted) {
+        setState(() {
+          _allPackages = items;
+          _hasMore = hasMore;
+          _currentPage = page;
+        });
+      }
     } catch (e) {
       debugPrint('FIRESTORE ERROR: $e');
-      setState(() => _hasError = true);
+      if (mounted) setState(() => _hasError = true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -164,8 +161,6 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
 
   @override
   Widget build(BuildContext context) {
-    initDataIfNeeded();
-
     return Scaffold(
       backgroundColor: DefaultColors.pagesBackground,
       body: Column(
@@ -181,54 +176,74 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Colis retournés",
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: DefaultColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 15),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                child: RwTextview(
-                  controller: _searchController,
-                  backgroundColor: Colors.white,
-                  hint: 'Rechercher Tél 1 ou Tél 2...',
-                  textNumeric: true,
-                  prefixIcon: Icons.phone_iphone,
-                  iconColor: Colors.blue,
-                  maxLength: 12,
+              const Text(
+                "Colis retournés",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: DefaultColors.textPrimary,
                 ),
               ),
-              const SizedBox(width: 8),
-              _iconButton(Icons.search, _onSearchPressed),
+              IconButton(
+                onPressed: _isLoading ? null : _resetAndReload,
+                icon: _isLoading
+                    ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.refresh, color: DefaultColors.primary),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          RwDropdown(
-            label: "Trier par date",
-            prefixIcon: Icons.sort,
-            iconColor: Colors.blueGrey,
-            value: _isDescending ? 'décroissant' : 'croissant',
-            items: _sortOptions,
-            itemLabelBuilder: (val) => val == 'décroissant'
-                ? "Plus récent (Nouveau → Ancien)"
-                : "Plus ancien (Ancien → Nouveau)",
-            onChanged: (String? newValue) {
-              if (newValue == null) return;
-              final shouldBeDesc = (newValue == 'décroissant');
-              if (shouldBeDesc != _isDescending) {
-                setState(() => _isDescending = shouldBeDesc);
-                _resetAndReload();
-              }
-            },
+          const SizedBox(height: 15),
+          RwExpandableWidget(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: RwTextview(
+                        controller: _searchController,
+                        backgroundColor: Colors.white,
+                        hint: 'Rechercher Tél 1 ou Tél 2...',
+                        textNumeric: true,
+                        prefixIcon: Icons.phone_iphone,
+                        iconColor: Colors.blue,
+                        maxLength: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _iconButton(Icons.search, _onSearchPressed),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                RwDropdown(
+                  label: "Trier par date",
+                  prefixIcon: Icons.sort,
+                  iconColor: Colors.blueGrey,
+                  value: _isDescending ? 'décroissant' : 'croissant',
+                  items: _sortOptions,
+                  itemLabelBuilder: (val) => val == 'décroissant'
+                      ? "Plus récent (Nouveau → Ancien)"
+                      : "Plus ancien (Ancien → Nouveau)",
+                  onChanged: (String? newValue) {
+                    if (newValue == null) return;
+                    final shouldBeDesc = (newValue == 'décroissant');
+                    if (shouldBeDesc != _isDescending) {
+                      setState(() => _isDescending = shouldBeDesc);
+                      _resetAndReload();
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -245,7 +260,8 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
       itemCount: _allPackages.length,
       itemBuilder: (_, i) => PackageItemCard(
         package: _allPackages[i],
-        showReturnReceivedButton: true, // Affiche le bouton "Retour reçu"
+        showReturnReceivedButton: true, // Pour confirmer la réception du retour
+        isAdmin: false,
       ),
     );
   }
@@ -311,13 +327,6 @@ class _CachedPage {
   final List<PackageModel> packages;
   final bool hasMore;
   final DateTime cachedAt;
-
-  const _CachedPage({
-    required this.packages,
-    required this.hasMore,
-    required this.cachedAt,
-  });
-
-  bool get isExpired =>
-      DateTime.now().difference(cachedAt) > const Duration(minutes: 5);
+  const _CachedPage({required this.packages, required this.hasMore, required this.cachedAt});
+  bool get isExpired => DateTime.now().difference(cachedAt) > const Duration(minutes: 5);
 }
