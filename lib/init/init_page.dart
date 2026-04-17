@@ -25,7 +25,7 @@ class _InitPageState extends State<InitPage>
       duration: const Duration(milliseconds: 800),
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.4).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.3).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
@@ -61,7 +61,7 @@ class _InitPageState extends State<InitPage>
   Widget build(BuildContext context) {
     return Scaffold(
       // Using withOpacity for broader Flutter version support
-      backgroundColor: DefaultColors.primary.withValues(alpha: 0.8),
+      backgroundColor: DefaultColors.background.withValues(alpha: 0.7),
       body: Center(
         child: AnimatedBuilder(
           animation: _scaleAnimation,
@@ -73,7 +73,7 @@ class _InitPageState extends State<InitPage>
           },
           child: Image.asset(
             ImagesFiles.logo2,
-            width: 120, // Slightly larger for the splash screen
+            width: 100, // Slightly larger for the splash screen
           ),
         ),
       ),

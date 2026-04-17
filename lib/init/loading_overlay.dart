@@ -51,13 +51,13 @@ class _PulseLoaderState extends State<_PulseLoader> with SingleTickerProviderSta
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: DefaultColors.primary.withValues(alpha: 0.1),
+        backgroundColor: DefaultColors.background.withValues(alpha: 0.7),
         body: Center(
           child: ScaleTransition(
             scale: _scaleAnimation,
             child: Image.asset(
               ImagesFiles.logo2,
-              width: 80,
+              width: 100,
             ),
           ),
         ),

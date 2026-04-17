@@ -2,6 +2,7 @@ import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/tools/refresh_notifier.dart'; // Assure-toi que l'import est correct
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -22,6 +23,21 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
   bool _isProcessing = false;
   PackageModel? _scannedPackage;
   EPackageStatus? _nextStatus;
+
+  // Fonction pour convertir l'enum en Label lisible
+  String _getStatusLabel(EPackageStatus status) {
+    switch (status) {
+      case EPackageStatus.waiting: return "En attente";
+      case EPackageStatus.deposit: return "Au Dépôt";
+      case EPackageStatus.returnFromDeposit: return "Retour Dépôt";
+      case EPackageStatus.progressing: return "En Cours";
+      case EPackageStatus.delivered: return "Livré";
+      case EPackageStatus.payed: return "Payé";
+      case EPackageStatus.permanentReturn: return "Retour Définitif";
+      case EPackageStatus.returnReceived: return "Retour Reçu";
+      default: return status.name;
+    }
+  }
 
   @override
   void dispose() {
@@ -48,7 +64,6 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
       ),
       body: Column(
         children: [
-          // Section Scanner
           Expanded(
             flex: 2,
             child: Stack(
@@ -64,7 +79,6 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
                     }
                   },
                 ),
-                // Overlay Viseur
                 Container(
                   width: scannerSize,
                   height: scannerSize,
@@ -76,8 +90,6 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
               ],
             ),
           ),
-
-          // Section Détails en bas
           _buildBottomDetailPanel(),
         ],
       ),
@@ -87,9 +99,9 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
   Widget _buildBottomDetailPanel() {
     if (_scannedPackage == null) {
       return Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(30),
         child: const Text("En attente de scan...",
-            style: TextStyle(color: Colors.grey)),
+            style: TextStyle(color: Colors.grey, fontSize: 16)),
       );
     }
 
@@ -98,7 +110,7 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, spreadRadius: 2)],
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -109,10 +121,10 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
             children: [
               Text(
                 "${_scannedPackage!.firstName} ${_scannedPackage!.lastName}",
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close_rounded, color: Colors.red),
                 onPressed: () {
                   setState(() => _scannedPackage = null);
                   _controller.start();
@@ -120,37 +132,42 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
               )
             ],
           ),
-          Text("📍 ${_scannedPackage!.governorate.name}"),
-          const SizedBox(height: 10),
+          Text("📍 ${_scannedPackage!.governorate.name}",
+              style: const TextStyle(fontSize: 16, color: Colors.black87)),
+          const SizedBox(height: 15),
           const Divider(),
-          const SizedBox(height: 10),
+          const SizedBox(height: 15),
 
-          // Affichage du changement de statut
           Row(
             children: [
               _statusChip(_scannedPackage!.status, Colors.grey),
-              const Icon(Icons.arrow_forward, size: 16, color: Colors.blue),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Icon(Icons.double_arrow_rounded, size: 20, color: Colors.blue),
+              ),
               _statusChip(_nextStatus!, Colors.blue),
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 25),
 
           SizedBox(
             width: double.infinity,
-            height: 50,
+            height: 55,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
               ),
               onPressed: _isProcessing ? null : _confirmUpdate,
               child: _isProcessing
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("CONFIRMER LE CHANGEMENT",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  : Text("PASSER À : ${_getStatusLabel(_nextStatus!).toUpperCase()}",
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ),
+          const SizedBox(height: 10),
         ],
       ),
     );
@@ -158,14 +175,16 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
 
   Widget _statusChip(EPackageStatus status, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color, width: 1.5),
       ),
-      child: Text(status.name.toUpperCase(),
-          style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.bold)),
+      child: Text(
+        _getStatusLabel(status).toUpperCase(),
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -180,16 +199,15 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
         return;
       }
 
-      // Logique de flux demandée
       EPackageStatus? next;
       if (package.status == EPackageStatus.waiting) {
-        next = EPackageStatus.deposit; // enattente -> Audepot
+        next = EPackageStatus.deposit;
       } else if (package.status == EPackageStatus.deposit) {
-        next = EPackageStatus.progressing; // Audepot -> en cours
+        next = EPackageStatus.progressing;
       } else if (package.status == EPackageStatus.progressing) {
-        next = EPackageStatus.returnFromDeposit; // en cours -> retourDepot
+        next = EPackageStatus.returnFromDeposit;
       } else if (package.status == EPackageStatus.returnFromDeposit) {
-        next = EPackageStatus.progressing; // retourDepot -> EnCours
+        next = EPackageStatus.progressing;
       }
 
       if (next != null) {
@@ -198,11 +216,11 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
           _nextStatus = next;
         });
       } else {
-        _showSnackBar("Statut actuel (${package.status.name}) non géré", isError: true);
+        _showSnackBar("Aucune action possible pour ce statut", isError: true);
         _controller.start();
       }
     } catch (e) {
-      _showSnackBar("Erreur technique", isError: true);
+      _showSnackBar("Erreur technique lors du scan", isError: true);
       _controller.start();
     }
   }
@@ -211,21 +229,32 @@ class _AdminScannerPageState extends State<AdminScannerPage> {
     setState(() => _isProcessing = true);
     try {
       await _db.updateStatus(_scannedPackage!.id, _nextStatus!);
-      _showSnackBar("Statut mis à jour : ${_nextStatus!.name}");
-      setState(() {
-        _scannedPackage = null;
-        _isProcessing = false;
-      });
-      _controller.start();
+
+      // Notification de rafraîchissement globale
+      RefreshNotifier().notifyRefresh();
+
+      _showSnackBar("Statut mis à jour avec succès");
+
+      if (mounted) {
+        // On attend un tout petit peu pour que le SnackBar soit visible avant le pop
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) Navigator.pop(context);
+        });
+      }
     } catch (e) {
       _showSnackBar("Erreur lors de la mise à jour", isError: true);
-      setState(() => _isProcessing = false);
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   void _showSnackBar(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: isError ? Colors.red : Colors.green),
+      SnackBar(
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
     );
   }
 }

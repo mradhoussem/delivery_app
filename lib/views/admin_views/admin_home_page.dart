@@ -132,10 +132,18 @@ class _AdminHomePageState extends State<AdminHomePage> {
       backgroundColor: DefaultColors.accent,
       unselectedColor: Colors.white70,
       onItemSelected: (index) {
-        setState(() {
-          _selectedIndex = index;
-          _activatedPages[index] = true;
-        });
+        if (items[index].title == "Confirmer Statut") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminScannerPage()),
+          );
+        } else {
+          // Pour les autres pages, on garde le comportement habituel (IndexedStack)
+          setState(() {
+            _selectedIndex = index;
+            _activatedPages[index] = true;
+          });
+        }
       },
       onLogout: _handleLogout,
     );
