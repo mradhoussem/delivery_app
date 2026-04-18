@@ -1,4 +1,4 @@
-import 'package:delivery_app/tools/default_colors.dart'; // Import de tes couleurs
+import 'package:delivery_app/tools/default_colors.dart';
 import 'package:flutter/material.dart';
 
 class RwExpandableWidget extends StatefulWidget {
@@ -11,14 +11,8 @@ class RwExpandableWidget extends StatefulWidget {
 }
 
 class _RwExpandableWidgetState extends State<RwExpandableWidget> {
-  late bool _isExpanded;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final double width = MediaQuery.of(context).size.width;
-    _isExpanded = width > 900;
-  }
+  // Initialisé à false par défaut pour que ce soit toujours masqué au départ
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -31,22 +25,22 @@ class _RwExpandableWidgetState extends State<RwExpandableWidget> {
           curve: Curves.fastOutSlowIn,
           child: _isExpanded
               ? Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.fromLTRB(10, 10, 10, 0),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: widget.child,
-                )
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: widget.child,
+          )
               : const SizedBox(width: double.infinity, height: 0),
         ),
 
@@ -58,7 +52,6 @@ class _RwExpandableWidgetState extends State<RwExpandableWidget> {
               onPressed: () => setState(() => _isExpanded = !_isExpanded),
               style: ElevatedButton.styleFrom(
                 backgroundColor: DefaultColors.primary,
-                // Ta couleur primaire
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,

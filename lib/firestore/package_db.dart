@@ -110,68 +110,6 @@ class PackageDB {
     }
   }
 
-  Future<QuerySnapshot<PackageModel>> getAdminPackagesPaged({
-    String? searchUsername,
-    String? searchPhone,
-    DocumentSnapshot? startAt,
-    int limit = 50,
-    required bool descending,
-  }) async {
-    try {
-      Query<PackageModel> query = _packageRef;
-      if (searchPhone != null && searchPhone.isNotEmpty) {
-        query = query.where(
-          Filter.or(
-            Filter('phone1', isEqualTo: searchPhone),
-            Filter('phone2', isEqualTo: searchPhone),
-          ),
-        );
-      }
-      if (searchUsername != null && searchUsername.isNotEmpty) {
-        query = query
-            .where('creatorUsername', isGreaterThanOrEqualTo: searchUsername)
-            .where(
-              'creatorUsername',
-              isLessThanOrEqualTo: '$searchUsername\uf8ff',
-            )
-            .orderBy('creatorUsername');
-      }
-      query = query.orderBy('createdAt', descending: descending);
-      if (startAt != null) query = query.startAfterDocument(startAt);
-      return await query.limit(limit).get();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<QuerySnapshot<PackageModel>> getAllPackagesPaged({
-    String? exactPhone,
-    String? status,
-    DocumentSnapshot? startAt,
-    int limit = 10,
-    bool descending = false,
-  }) async {
-    try {
-      Query<PackageModel> query = _packageRef;
-      if (status != null && status != "ALL") {
-        query = query.where('status', isEqualTo: status);
-      }
-      if (exactPhone != null && exactPhone.isNotEmpty) {
-        query = query.where(
-          Filter.or(
-            Filter('phone1', isEqualTo: exactPhone),
-            Filter('phone2', isEqualTo: exactPhone),
-          ),
-        );
-      }
-      query = query.orderBy('createdAt', descending: descending);
-      if (startAt != null) query = query.startAfterDocument(startAt);
-      return await query.limit(limit).get();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   Future<List<PackageModel>> getAllPackagesByStatus({
     required String userId,
     required EPackageStatus status,
@@ -208,6 +146,96 @@ class PackageDB {
       return 0;
     }
   }
+
+
+  Future<QuerySnapshot<PackageModel>> getAdminPackagesPaged({
+    String? searchUsername,
+    String? searchPhone,
+    DocumentSnapshot? startAt,
+    int limit = 50,
+    required bool descending,
+  }) async {
+    try {
+      Query<PackageModel> query = _packageRef;
+      if (searchPhone != null && searchPhone.isNotEmpty) {
+        query = query.where(
+          Filter.or(
+            Filter('phone1', isEqualTo: searchPhone),
+            Filter('phone2', isEqualTo: searchPhone),
+          ),
+        );
+      }
+      if (searchUsername != null && searchUsername.isNotEmpty) {
+        query = query
+            .where('creatorUsername', isGreaterThanOrEqualTo: searchUsername)
+            .where(
+              'creatorUsername',
+              isLessThanOrEqualTo: '$searchUsername\uf8ff',
+            )
+            .orderBy('creatorUsername');
+      }
+      query = query.orderBy('createdAt', descending: descending);
+      if (startAt != null) query = query.startAfterDocument(startAt);
+      return await query.limit(limit).get();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<PackageModel>> getAdminPackagesByStatus({
+    required EPackageStatus status,
+  }) async {
+    try {
+      final snapshot = await _db
+          .collection(_collection)
+          .where('status', isEqualTo: status.name)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) =>
+          PackageModel.fromMap(doc.data(), doc.id))
+          .toList();
+    } catch (e) {
+      debugPrint("Error fetching packages by status: $e");
+      return [];
+    }
+  }
+
+  Future<List<PackageModel>> getPaidPackagesForReport({
+    required int year,
+    required int month,
+  }) async {
+    try {
+      // 1. Define the start of the month (e.g., 2026-04-01 00:00:00)
+      final DateTime startOfMonth = DateTime(year, month, 1);
+
+      // 2. Define the end of the month (e.g., 2026-05-01 00:00:00, then subtract 1 ms)
+      // Or more simply: DateTime(year, month + 1, 0, 23, 59, 59)
+      final DateTime endOfMonth = DateTime(year, month + 1, 0, 23, 59, 59, 999);
+
+      // 3. Query Firestore with range filters
+      final snapshot = await _db
+          .collection(_collection)
+          .where('status', isEqualTo: EPackageStatus.payed.name)
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      // 4. Map the documents to your PackageModel
+      return snapshot.docs.map((doc) {
+        return PackageModel.fromMap(
+          doc.data() as Map<String, dynamic>,
+          doc.id,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint("Error fetching paid packages for report: $e");
+      return [];
+    }
+  }
+
 
   Future<void> updatePackageFields(
     String packageId,

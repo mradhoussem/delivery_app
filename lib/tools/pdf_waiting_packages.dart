@@ -1,11 +1,11 @@
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 import 'dart:typed_data';
+
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
 
 class PdfWaitingPackages {
   static Future<void> printList(List<PackageModel> packages) async {
@@ -71,7 +71,9 @@ class PdfWaitingPackages {
               "Client",
               "Téléphone",
               "Gouvernorat",
+              "Adresse",
               "Montant",
+              "Crée par",
               "Date",
             ],
             data: packages.map((p) {
@@ -79,7 +81,9 @@ class PdfWaitingPackages {
                 "${p.firstName} ${p.lastName}",
                 "${p.phone1}${p.phone2 != null ? ' / ${p.phone2}' : ''}",
                 p.governorate.name,
+                p.address,
                 "${p.amount.toStringAsFixed(3)} TND",
+                "${p.creatorUsername}",
                 "${p.createdAt.day.toString().padLeft(2, '0')}/"
                     "${p.createdAt.month.toString().padLeft(2, '0')}/"
                     "${p.createdAt.year}",
