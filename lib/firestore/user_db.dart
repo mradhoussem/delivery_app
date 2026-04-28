@@ -42,6 +42,7 @@ class UserDB {
         .toList();
   }
 
+
   Future<void> addUser(UserModel user, String rawPassword) async {
     Map<String, dynamic> data = user.toMap();
     // Normalize username to lowercase before saving

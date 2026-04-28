@@ -191,15 +191,6 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
                   color: DefaultColors.textPrimary,
                 ),
               ),
-              IconButton(
-                onPressed: _isLoading ? null : _resetAndReload,
-                icon: _isLoading
-                    ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.refresh, color: DefaultColors.primary),
-              ),
             ],
           ),
           const SizedBox(height: 15),

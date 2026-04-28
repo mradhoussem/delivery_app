@@ -1,8 +1,19 @@
+import 'package:delivery_app/dialogs/rd_print_save_payed_packages.dart';
+import 'package:delivery_app/dialogs/rd_print_save_permenet_recieved_package.dart';
+import 'package:delivery_app/dialogs/rd_print_save_waiting_package.dart';
+import 'package:delivery_app/firestore/enums/e_packages_status.dart';
+import 'package:delivery_app/firestore/models/m_package.dart';
+import 'package:delivery_app/firestore/models/m_user.dart';
+import 'package:delivery_app/firestore/package_db.dart';
+import 'package:delivery_app/firestore/user_db.dart';
+import 'package:delivery_app/init/loading_overlay.dart';
 import 'package:delivery_app/reusable_widgets/rw_appbar.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar.dart';
-import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar_item.dart';
+import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/views/admin_views/packages_admin_page.dart';
+import 'package:delivery_app/views/admin_views/packages_payed_admin_page.dart';
+import 'package:delivery_app/views/admin_views/packages_waiting_admin_page.dart';
 import 'package:delivery_app/views/admin_views/scanner_admin_page.dart';
 import 'package:delivery_app/views/admin_views/users_view_page.dart';
 import 'package:flutter/material.dart';
@@ -18,27 +29,21 @@ class AdminHomePage extends StatefulWidget {
 class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
   bool _isSidebarOpen = true;
-
-  // null = still loading, true = ready to show content
   bool? _isReady;
-
   late List<bool> _activatedPages;
 
+  final PackageDB _db = PackageDB();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _activatedPages = List.generate(4, (index) => index == 0);
+    // On initialise avec une taille suffisante pour couvrir pages + actions
+    _activatedPages = List.generate(10, (index) => index == 0);
     _initAdmin();
   }
 
   Future<void> _initAdmin() async {
-    // This async gap mirrors _loadUserInfo() in UserHomePage.
-    // It ensures the first build() sees _isReady == null,
-    // so IndexedStack is not constructed until _isReady flips to true.
-    // Without this, _buildItems() returns real widgets on the very first
-    // build(), and any later setState recreates them — causing blank pages.
     final prefs = await SharedPreferences.getInstance();
     final bool loggedIn = prefs.getBool('is_admin_logged_in') ?? false;
     if (mounted) {
@@ -54,12 +59,225 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
+  Future<void> _showUserSelectionDialog(EPackageStatus status) async {
+    UserModel? selectedUser;
+    final UserDB userRepo = UserDB();
+
+    showDialog(
+      context: context,
+      builder: (ctx) =>
+          AlertDialog(
+            title: Text("Sélectionner l'expéditeur"),
+            content: FutureBuilder<List<UserModel>>(
+              future: userRepo.getAllUsers(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const SizedBox(
+                    height: 100, // Une hauteur fixe pour éviter que la popup ne saute à la fin du chargement
+                    child: Center(
+                      child: SizedBox(
+                        height: 30,
+                        width: 30,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3, // Optionnel : réduit l'épaisseur du trait
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<UserModel>(
+                      decoration: const InputDecoration(
+                          labelText: "Expéditeur"),
+                      items: snapshot.data!.map((user) {
+                        return DropdownMenuItem(
+                          value: user,
+                          child: Text(user.username),
+                        );
+                      }).toList(),
+                      onChanged: (val) => selectedUser = val,
+                    ),
+                  ],
+                );
+              },
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx),
+                  child: const Text("ANNULER")),
+              ElevatedButton(
+                onPressed: () {
+                  if (selectedUser != null) {
+                    Navigator.pop(ctx);
+                    _handlePrintByUser(status, selectedUser!);
+                  }
+                },
+                child: const Text("CONTINUER"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // --- Logique d'impression ---
+
+  Future<void> _handlePrintByUser(EPackageStatus status, UserModel user) async {
+    List<PackageModel> list = [];
+    String periodLabel = "";
+
+    try {
+      if (status == EPackageStatus.payed) {
+        final dateResult = await _showDateFilterDialog(context);
+        if (dateResult == null) return;
+
+        periodLabel = "${dateResult['month'].toString().padLeft(
+            2, '0')}/${dateResult['year']}";
+
+        LoadingOverlay.show(context);
+        // Utilisation du filtre userId (creatorId)
+        final snapshot = await _db.getAdminPackagesPaged(
+          status: EPackageStatus.payed,
+          searchUsername: user.username,
+          // Ou filtrez par ID si votre DB le supporte
+          limit: 500,
+          // On prend une large limite pour le rapport
+          descending: true,
+        );
+        list = snapshot.docs.map((d) => d.data()).toList();
+      } else {
+        LoadingOverlay.show(context);
+        // Récupération filtrée par statut et utilisateur
+        final snapshot = await _db.getAdminPackagesPaged(
+          status: status,
+          searchUsername: user.username,
+          limit: 500,
+          descending: true,
+        );
+        list = snapshot.docs.map((d) => d.data()).toList();
+      }
+
+      if (mounted) LoadingOverlay.hide(context);
+
+      if (list.isEmpty) {
+        _showNoPackagesPopup("${status.name} pour ${user.username}");
+        return;
+      }
+
+      // Appel des dialogues PDF existants
+      if (status == EPackageStatus.waiting) {
+        await RdPrintSaveWaitingPackages.show(context, list);
+      } else if (status == EPackageStatus.permanentReturn) {
+        await RdPrintSavePermanentReturn.show(context, list);
+      } else if (status == EPackageStatus.payed) {
+        await RdPrintSavePayedPackages.show(context, list, periodLabel);
+      }
+    } catch (e) {
+      if (mounted) {
+        LoadingOverlay.hide(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur : $e")),
+        );
+      }
+    }
+  }
+
+  Future<Map<String, int>?> _showDateFilterDialog(BuildContext context) async {
+    int selectedYear = DateTime
+        .now()
+        .year;
+    int selectedMonth = DateTime
+        .now()
+        .month;
+    final List<String> monthNames = [
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
+    ];
+
+    return showDialog<Map<String, int>>(
+      context: context,
+      builder: (ctx) =>
+          AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15)),
+            title: const Text("Période des rapports"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                StatefulBuilder(
+                  builder: (context, setStepState) =>
+                      Column(
+                        children: [
+                          DropdownButton<int>(
+                            value: selectedMonth,
+                            isExpanded: true,
+                            items: List.generate(12, (i) =>
+                                DropdownMenuItem(value: i + 1, child: Text(
+                                    monthNames[i]))),
+                            onChanged: (v) =>
+                                setStepState(() => selectedMonth = v!),
+                          ),
+                          const SizedBox(height: 10),
+                          DropdownButton<int>(
+                            value: selectedYear,
+                            isExpanded: true,
+                            items: [2024, 2025, 2026].map((y) =>
+                                DropdownMenuItem(value: y, child: Text(
+                                    "Année: $y"))).toList(),
+                            onChanged: (v) =>
+                                setStepState(() => selectedYear = v!),
+                          ),
+                        ],
+                      ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx),
+                  child: const Text("ANNULER")),
+              ElevatedButton(
+                onPressed: () =>
+                    Navigator.pop(
+                        ctx, {"month": selectedMonth, "year": selectedYear}),
+                child: const Text("CONFIRMER"),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showNoPackagesPopup(String status) {
+    showDialog(
+      context: context,
+      builder: (ctx) =>
+          AlertDialog(
+            title: const Text("Aucun colis"),
+            content: Text("Aucun colis trouvé pour cette catégorie."),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx), child: const Text("OK"))
+            ],
+          ),
+    );
+  }
+
   List<RwSideBarItem> _buildItems() {
     return [
       RwSideBarItem(
         title: "Tableau de bord",
         icon: Icons.dashboard,
         page: const PackagesAdminPage(),
+      ),
+      RwSideBarItem(
+        title: "Colis en attente",
+        icon: Icons.pending_actions,
+        page: const PackagesWaitingAdminPage(),
+      ),
+      RwSideBarItem(
+        title: "Colis payé",
+        icon: Icons.monetization_on,
+        page: const PackagesPayedAdminPage(),
       ),
       RwSideBarItem(
         title: "Utilisateurs",
@@ -71,15 +289,22 @@ class _AdminHomePageState extends State<AdminHomePage> {
         icon: Icons.qr_code_2,
         page: const AdminScannerPage(),
       ),
+      RwSideBarItem(
+        title: "Imprimer Retours",
+        icon: Icons.keyboard_return,
+        onTap: () => _showUserSelectionDialog(EPackageStatus.permanentReturn),
+      ),
+      RwSideBarItem(
+        title: "Imprimer Payés",
+        icon: Icons.payments,
+        onTap: () => _showUserSelectionDialog(EPackageStatus.payed),
+      ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isWeb = MediaQuery.of(context).size.width > 900;
-
-    // Same local variable used for both drawer and body —
-    // guarantees both get the exact same widget instances in one frame.
     final items = _buildItems();
 
     return Scaffold(
@@ -108,10 +333,8 @@ class _AdminHomePageState extends State<AdminHomePage> {
                       ? const Center(child: CircularProgressIndicator())
                       : IndexedStack(
                     index: _selectedIndex,
-                    children: items.asMap().entries.map((entry) {
-                      return _activatedPages[entry.key]
-                          ? entry.value.page
-                          : const SizedBox.shrink();
+                    children: items.map((item) {
+                      return item.page ?? const SizedBox.shrink();
                     }).toList(),
                   ),
                 ),
@@ -132,10 +355,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
       backgroundColor: DefaultColors.accent,
       unselectedColor: Colors.white70,
       onItemSelected: (index) {
-        setState(() {
-          _selectedIndex = index;
-          _activatedPages[index] = true;
-        });
+        if (items[index].onTap != null) {
+          items[index].onTap!();
+        } else {
+          setState(() {
+            _selectedIndex = index;
+            _activatedPages[index] = true;
+          });
+        }
       },
       onLogout: _handleLogout,
     );

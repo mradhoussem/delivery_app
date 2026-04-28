@@ -53,6 +53,7 @@ class PackageDB {
   Future<QuerySnapshot<PackageModel>> getPackagesByUserPaged({
     required String userId,
     String? exactPhone,
+    String? status, // Assure-toi que ce paramètre est bien là
     DocumentSnapshot? startAt,
     int limit = 10,
     bool descending = false,
@@ -62,6 +63,12 @@ class PackageDB {
         'creatorUserId',
         isEqualTo: userId,
       );
+
+      // AJOUTE CETTE CONDITION :
+      if (status != null && status.isNotEmpty) {
+        query = query.where('status', isEqualTo: status);
+      }
+
       if (exactPhone != null && exactPhone.isNotEmpty) {
         query = query.where(
           Filter.or(
@@ -70,6 +77,7 @@ class PackageDB {
           ),
         );
       }
+
       query = query.orderBy('createdAt', descending: descending);
       if (startAt != null) query = query.startAfterDocument(startAt);
       return await query.limit(limit).get();
@@ -149,6 +157,7 @@ class PackageDB {
 
 
   Future<QuerySnapshot<PackageModel>> getAdminPackagesPaged({
+    EPackageStatus? status, // Nouveau paramètre
     String? searchUsername,
     String? searchPhone,
     DocumentSnapshot? startAt,
@@ -157,6 +166,13 @@ class PackageDB {
   }) async {
     try {
       Query<PackageModel> query = _packageRef;
+
+      // 1. Filtre d'égalité pour le statut (toujours en premier)
+      if (status != null) {
+        query = query.where('status', isEqualTo: status.name);
+      }
+
+      // 2. Filtre de recherche par téléphone (Filtre OR)
       if (searchPhone != null && searchPhone.isNotEmpty) {
         query = query.where(
           Filter.or(
@@ -165,21 +181,57 @@ class PackageDB {
           ),
         );
       }
+
+      // 3. Filtre de recherche par nom (Filtre d'inégalité)
       if (searchUsername != null && searchUsername.isNotEmpty) {
         query = query
             .where('creatorUsername', isGreaterThanOrEqualTo: searchUsername)
             .where(
-              'creatorUsername',
-              isLessThanOrEqualTo: '$searchUsername\uf8ff',
-            )
-            .orderBy('creatorUsername');
+          'creatorUsername',
+          isLessThanOrEqualTo: '$searchUsername\uf8ff',
+        )
+            .orderBy('creatorUsername'); // Doit être le premier orderBy si filtré
       }
+
+      // 4. Tri par date de création
       query = query.orderBy('createdAt', descending: descending);
+
+      // 5. Pagination
       if (startAt != null) query = query.startAfterDocument(startAt);
+
       return await query.limit(limit).get();
     } catch (e) {
+      debugPrint("Erreur Firestore: $e");
       rethrow;
     }
+  }
+
+  Future<List<PackageModel>> getUserPaidPackagesForReport({
+    required String userId,
+    required int year,
+    required int month,
+  }) async {
+    final snapshot = await _packageRef
+        .where('creatorId', isEqualTo: userId)
+        .where('status', isEqualTo: EPackageStatus.payed.name)
+    // Vous devrez peut-être filtrer sur un champ 'paymentDate' ou 'createdAt'
+    // selon votre structure Firestore
+        .get();
+
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+// Récupérer les colis par statut pour un utilisateur spécifique
+  Future<List<PackageModel>> getUserPackagesByStatus({
+    required String userId,
+    required EPackageStatus status,
+  }) async {
+    final snapshot = await _packageRef
+        .where('creatorId', isEqualTo: userId)
+        .where('status', isEqualTo: status.name)
+        .get();
+
+    return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
   Future<List<PackageModel>> getAdminPackagesByStatus({
@@ -226,7 +278,7 @@ class PackageDB {
       // 4. Map the documents to your PackageModel
       return snapshot.docs.map((doc) {
         return PackageModel.fromMap(
-          doc.data() as Map<String, dynamic>,
+          doc.data(),
           doc.id,
         );
       }).toList();

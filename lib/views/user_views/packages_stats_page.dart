@@ -1,13 +1,18 @@
-import 'package:delivery_app/tools/refresh_notifier.dart';
-import 'package:flutter/material.dart';
 import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/package_db.dart';
-import 'package:delivery_app/reusable_widgets/rw_flip_card.dart';
+import 'package:delivery_app/reusable_widgets/rw_statistic_card.dart';
+import 'package:delivery_app/tools/refresh_notifier.dart';
+import 'package:flutter/material.dart';
 
 class PackagesStatsPage extends StatefulWidget {
   final String userId;
+  final Function(int, {String? status}) onNavigate;
 
-  const PackagesStatsPage({super.key, required this.userId});
+  const PackagesStatsPage({
+    super.key,
+    required this.userId,
+    required this.onNavigate,
+  });
 
   @override
   State<PackagesStatsPage> createState() => _PackagesStatsPageState();
@@ -17,26 +22,21 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
   final PackageDB _db = PackageDB();
   Map<EPackageStatus, int> _counts = {};
   int _totalCount = 0;
-  bool _isLoading = false; // Initialisé à false car on attend l'init manuel
-
-  // 1. Variable pour suivre l'initialisation
+  bool _isLoading = false;
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // 2. Écouter les rafraîchissements globaux
     RefreshNotifier().refreshCounter.addListener(_loadStats);
   }
 
   @override
   void dispose() {
-    // 3. Nettoyage de l'écouteur
     RefreshNotifier().refreshCounter.removeListener(_loadStats);
     super.dispose();
   }
 
-  // 4. MÉTHODE DE RÉFÉRENCE : Appellée par le parent quand l'onglet devient visible
   void initDataIfNeeded() {
     if (!_isInitialized) {
       _loadStats();
@@ -45,12 +45,11 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
   }
 
   Future<void> _loadStats() async {
-    // Si on est déjà en train de charger, on ignore l'appel
     if (_isLoading && _isInitialized) return;
-
     if (mounted) setState(() => _isLoading = true);
 
     try {
+      // Exécution parallèle des comptes par statut pour optimiser le temps
       final results = await Future.wait([
         _db.getPackageCountByStatus(userId: widget.userId),
         ...EPackageStatus.values.map(
@@ -79,7 +78,6 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 5. Sécurité : Initialisation automatique si build est appelé
     if (!_isInitialized) {
       initDataIfNeeded();
     }
@@ -91,35 +89,40 @@ class _PackagesStatsPageState extends State<PackagesStatsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "Statistiques Détaillées",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ],
+        const Text(
+          "Statistiques Détaillées",
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
         Wrap(
           spacing: 15,
           runSpacing: 15,
           children: [
-            // Total Card
-            RwFlipCard(
-              title: "Total Expéditions",
-              value: _totalCount.toString(),
-              gradientColors: [Colors.lightGreen, Colors.lightBlueAccent],
-              onTap: () => (),
-            ),
-
-            // Status Cards mapped dynamically
             ...EPackageStatus.values.map(
-                  (status) => RwFlipCard(
+                  (status) => RwStatisticCard(
                 title: status.label,
                 value: (_counts[status] ?? 0).toString(),
                 gradientColors: status.gradientColors,
-                onTap: () => (),
+                onTap: () {
+                  // MAPPING : Détermine l'onglet cible et le filtre éventuel
+                  int targetIndex = 1; // Par défaut : Mes Colis (PackagesListPage)
+                  String? filter;
+
+                  if (status == EPackageStatus.waiting) {
+                    targetIndex = 2; // PackagesWaitingListPage
+                  } else if (status == EPackageStatus.payed) {
+                    targetIndex = 3; // PackagesPayedListPage
+                  } else if (status == EPackageStatus.returnReceived ||
+                      status == EPackageStatus.permanentReturn) {
+                    targetIndex = 4; // PackagesReceivedListPage
+                  } else {
+                    // Pour les autres statuts, on va sur la liste globale avec filtre
+                    targetIndex = 1;
+                    filter = status.name;
+                  }
+
+                  widget.onNavigate(targetIndex, status: filter);
+                },
               ),
             ),
           ],

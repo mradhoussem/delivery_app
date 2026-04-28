@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:delivery_app/firestore/user_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
@@ -17,16 +15,21 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _userRepo = UserDB();
   final TextEditingController _passController = TextEditingController();
+  final TextEditingController _confirmPassController = TextEditingController(); // Nouveau
   bool _isLoading = false;
 
   Future<void> _updatePassword() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
     try {
-      final encrypted = sha256.convert(utf8.encode(_passController.text.trim())).toString();
-      await _userRepo.updatePassword(widget.userId, encrypted);
+      // On envoie le texte brut, UserDB s'occupera du hachage
+      await _userRepo.updatePassword(
+          widget.userId, _passController.text.trim());
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Mis à jour !")));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Mot de passe mis à jour !")));
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -47,14 +50,46 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
           key: _formKey,
           child: Column(
             children: [
-              RwTextview(controller: _passController, hint: "Nouveau mot de passe", isPassword: true, iconColor: DefaultColors.primary, bordercolor: Colors.black12, focusBordercolor: DefaultColors.primary),
+              RwTextview(
+                controller: _passController,
+                hint: "Nouveau mot de passe",
+                isPassword: true,
+                iconColor: DefaultColors.primary,
+                validator: (v) => v!.length < 6 ? "Minimum 6 caractères" : null,
+              ),
+              const SizedBox(height: 15),
+              RwTextview(
+                controller: _confirmPassController,
+                hint: "Confirmer le mot de passe",
+                isPassword: true,
+                iconColor: DefaultColors.primary,
+                validator: (v) {
+                  if (v != _passController.text)
+                    return "Les mots de passe ne correspondent pas";
+                  return null;
+                },
+              ),
               const SizedBox(height: 30),
               GestureDetector(
                 onTap: _isLoading ? null : _updatePassword,
                 child: Container(
                   width: double.infinity, height: 55,
-                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(15), color: DefaultColors.primary, boxShadow: [BoxShadow(color: DefaultColors.primary.withValues(alpha: 0.3), offset: const Offset(0, 5), blurRadius: 10)]),
-                  child: Center(child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text("METTRE À JOUR", style: TextStyle(color: DefaultColors.pagesBackground, fontWeight: FontWeight.bold))),
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      color: DefaultColors.primary,
+                      boxShadow: [
+                        BoxShadow(
+                            color: DefaultColors.primary.withValues(alpha: 0.3),
+                            offset: const Offset(0, 5),
+                            blurRadius: 10)
+                      ]
+                  ),
+                  child: Center(
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text("METTRE À JOUR", style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold))
+                  ),
                 ),
               ),
             ],

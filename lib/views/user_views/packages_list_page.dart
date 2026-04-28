@@ -13,7 +13,9 @@ import 'package:flutter/material.dart';
 
 class PackagesListPage extends StatefulWidget {
   final String userId;
-  const PackagesListPage({super.key, required this.userId});
+  final String? initialStatus;
+
+  const PackagesListPage({super.key, required this.userId, this.initialStatus});
 
   @override
   State<PackagesListPage> createState() => _PackagesListPageState();
@@ -30,6 +32,7 @@ class _PackagesListPageState extends State<PackagesListPage> {
   final List<String> _sortOptions = ['décroissant', 'croissant'];
 
   String? _lastPhone;
+  String? _activeStatus;
   int _currentPage = 1;
   bool _hasMore = true;
   bool _isLoading = false;
@@ -39,10 +42,21 @@ class _PackagesListPageState extends State<PackagesListPage> {
   @override
   void initState() {
     super.initState();
+    _activeStatus = widget.initialStatus;
     _searchController.addListener(_onPhoneTextChanged);
     RefreshNotifier().refreshCounter.addListener(_resetAndReload);
-    // Lancement initial
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchPage(1));
+  }
+
+  @override
+  void didUpdateWidget(PackagesListPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialStatus != oldWidget.initialStatus) {
+      setState(() {
+        _activeStatus = widget.initialStatus;
+      });
+      _resetAndReload();
+    }
   }
 
   @override
@@ -68,7 +82,7 @@ class _PackagesListPageState extends State<PackagesListPage> {
     _resetAndReload();
   }
 
-  String _cacheKey(int page) => '${_lastPhone ?? ""}|$page|$_isDescending';
+  String _cacheKey(int page) => '${_lastPhone ?? ""}|${_activeStatus ?? ""}|$page|$_isDescending';
 
   Future<void> _fetchPage(int page) async {
     if (_isLoading) return;
@@ -106,6 +120,7 @@ class _PackagesListPageState extends State<PackagesListPage> {
       final snapshot = await _db.getPackagesByUserPaged(
         userId: widget.userId,
         exactPhone: phone.isEmpty ? null : phone,
+        status: _activeStatus,
         startAt: _pageStarts[page - 1],
         limit: 11,
         descending: _isDescending,
@@ -176,22 +191,13 @@ class _PackagesListPageState extends State<PackagesListPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Toutes les Colis",
-                style: TextStyle(
+              Text(
+                _activeStatus == null ? "Toutes les Colis" : "Colis : ${_activeStatus!.toUpperCase()}",
+                style: const TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: DefaultColors.textPrimary,
                 ),
-              ),
-              IconButton(
-                onPressed: _isLoading ? null : _resetAndReload,
-                icon: _isLoading
-                    ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.refresh, color: DefaultColors.primary),
               ),
             ],
           ),
@@ -253,8 +259,8 @@ class _PackagesListPageState extends State<PackagesListPage> {
       itemCount: _allPackages.length,
       itemBuilder: (_, i) => PackageItemCard(
         package: _allPackages[i],
-        showReturnReceivedButton: true, // Autorise le bouton de réception
-        isAdmin: false, // Vue utilisateur
+        showReturnReceivedButton: true,
+        isAdmin: false,
       ),
     );
   }

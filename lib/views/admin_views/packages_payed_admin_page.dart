@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
@@ -9,21 +10,19 @@ import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:delivery_app/views/user_views/package_item_card.dart';
 import 'package:flutter/material.dart';
 
-class PackagesAdminPage extends StatefulWidget {
-  const PackagesAdminPage({super.key});
+class PackagesPayedAdminPage extends StatefulWidget {
+  const PackagesPayedAdminPage({super.key});
 
   @override
-  State<PackagesAdminPage> createState() => _PackagesAdminPageState();
+  State<PackagesPayedAdminPage> createState() => _PackagesPayedAdminPageState();
 }
 
-class _PackagesAdminPageState extends State<PackagesAdminPage> {
+class _PackagesPayedAdminPageState extends State<PackagesPayedAdminPage> {
   final PackageDB _db = PackageDB();
   final TextEditingController _userSearchController = TextEditingController();
   final TextEditingController _phoneSearchController = TextEditingController();
 
-  final Map<String, _CachedAdminPage> _cache = {};
   final List<DocumentSnapshot?> _pageStarts = [null];
-
   List<PackageModel> _packages = [];
   int _currentPage = 1;
   bool _hasMore = true;
@@ -66,7 +65,9 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
       final nameQuery = _userSearchController.text.trim();
       final phoneQuery = _phoneSearchController.text.trim();
 
+      // Utilisation du filtre Payed Status
       final snapshot = await _db.getAdminPackagesPaged(
+        status: EPackageStatus.payed,
         searchUsername: nameQuery.isEmpty ? null : nameQuery,
         searchPhone: phoneQuery.isEmpty ? null : phoneQuery,
         startAt: _pageStarts[page - 1],
@@ -94,7 +95,6 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
 
   void _resetAndReload() {
     setState(() {
-      _cache.clear();
       _pageStarts.clear();
       _pageStarts.add(null);
       _currentPage = 1;
@@ -119,18 +119,21 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
       ),
     );
   }
+
   Widget _buildBody() {
-    if (_isLoading && _packages.isEmpty)
-      return const Center(child: CircularProgressIndicator());
-    if (_hasError) return _buildErrorState();
-    if (_packages.isEmpty) return _buildEmptyState();
+    if (_isLoading && _packages.isEmpty) return const Center(child: CircularProgressIndicator());
+    if (_hasError) return Center(child: Text("Erreur de chargement"));
+    if (_packages.isEmpty) return Center(child: Text("Aucun colis payé trouvé"));
+
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       itemCount: _packages.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) =>
-          PackageItemCard(
-              package: _packages[index], showSender: true, isAdmin: true),
+      itemBuilder: (context, index) => PackageItemCard(
+        package: _packages[index],
+        showSender: true,
+        isAdmin: true,
+      ),
     );
   }
 
@@ -140,10 +143,11 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text("Flux Global",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-          IconButton(onPressed: _isLoading ? null : _resetAndReload,
-              icon: const Icon(Icons.refresh, color: DefaultColors.primary)),
+          const Text("Colis Payés", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+          IconButton(
+            onPressed: _isLoading ? null : _resetAndReload,
+            icon: const Icon(Icons.refresh, color: DefaultColors.primary),
+          ),
         ],
       ),
     );
@@ -154,14 +158,9 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
       child: Column(
         children: [
-          RwTextview(controller: _userSearchController,
-              label: "Nom de l'expéditeur",
-              prefixIcon: Icons.storefront),
+          RwTextview(controller: _userSearchController, label: "Nom de l'expéditeur", prefixIcon: Icons.storefront),
           const SizedBox(height: 10),
-          RwTextview(controller: _phoneSearchController,
-              label: "Numéro de Téléphone",
-              prefixIcon: Icons.phone_android,
-              textNumeric: true),
+          RwTextview(controller: _phoneSearchController, label: "Numéro de Téléphone", prefixIcon: Icons.phone_android, textNumeric: true),
           const SizedBox(height: 15),
           RwDropdown(
             label: "ORDRE DE TRI",
@@ -177,8 +176,7 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
-                onPressed: _resetAndReload, child: const Text("RECHERCHER")),
+            child: ElevatedButton(onPressed: _resetAndReload, child: const Text("RECHERCHER")),
           ),
         ],
       ),
@@ -192,26 +190,11 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          if (_currentPage > 1) IconButton(icon: const Icon(Icons.chevron_left),
-              onPressed: () => _fetchPage(_currentPage - 1)),
+          if (_currentPage > 1) IconButton(icon: const Icon(Icons.chevron_left), onPressed: () => _fetchPage(_currentPage - 1)),
           Text("Page $_currentPage"),
-          if (_hasMore) IconButton(icon: const Icon(Icons.chevron_right),
-              onPressed: () => _fetchPage(_currentPage + 1)),
+          if (_hasMore) IconButton(icon: const Icon(Icons.chevron_right), onPressed: () => _fetchPage(_currentPage + 1)),
         ],
       ),
     );
   }
-
-  Widget _buildErrorState() => Center(child: Text("Erreur de chargement"));
-
-  Widget _buildEmptyState() => Center(child: Text("Aucun colis"));
-}
-
-class _CachedAdminPage {
-  final List<PackageModel> packages;
-  final bool hasMore;
-  final DateTime cachedAt;
-
-  _CachedAdminPage(
-      {required this.packages, required this.hasMore, required this.cachedAt});
 }

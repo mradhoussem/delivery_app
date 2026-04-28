@@ -246,54 +246,58 @@ class _PackagesWaitingListPageState extends State<PackagesWaitingListPage> {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    Container(
-                      margin: const EdgeInsets.only(top: 25),
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: DefaultColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 22,
-                            horizontal: 20,
-                          ),
-                        ),
-                        onPressed: _isPrinting
-                            ? null
-                            : () async {
-                                setState(() => _isPrinting = true);
-                                try {
-                                  if (mounted) LoadingOverlay.show(context);
-                                  final allPackages = await _db
-                                      .getAllPackagesByStatus(
-                                        userId: widget.userId,
-                                        status: _status,
-                                      );
-                                  await Future.delayed(
-                                    const Duration(milliseconds: 300),
-                                  );
-                                  if (!mounted) return;
-                                  LoadingOverlay.hide(context);
-                                  await RdPrintSaveWaitingPackages.show(
-                                    context,
-                                    allPackages,
-                                  );
-                                } catch (e) {
-                                  if (mounted) LoadingOverlay.hide(context);
-                                } finally {
-                                  if (mounted) {
-                                    setState(() => _isPrinting = false);
-                                  }
-                                }
-                              },
-                        icon: const Icon(Icons.print),
-                        label: const Text("Imprimer Manifeste"),
-                      ),
-                    ),
+
                   ],
                 ),
+
               ],
             ),
+          ),Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 25),
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DefaultColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 22,
+                    horizontal: 20,
+                  ),
+                ),
+                onPressed: _isPrinting
+                    ? null
+                    : () async {
+                  setState(() => _isPrinting = true);
+                  try {
+                    if (mounted) LoadingOverlay.show(context);
+                    final allPackages = await _db
+                        .getAllPackagesByStatus(
+                      userId: widget.userId,
+                      status: _status,
+                    );
+                    await Future.delayed(
+                      const Duration(milliseconds: 300),
+                    );
+                    if (!mounted) return;
+                    LoadingOverlay.hide(context);
+                    await RdPrintSaveWaitingPackages.show(
+                      context,
+                      allPackages,
+                    );
+                  } catch (e) {
+                    if (mounted) LoadingOverlay.hide(context);
+                  } finally {
+                    if (mounted) {
+                      setState(() => _isPrinting = false);
+                    }
+                  }
+                },
+                icon: const Icon(Icons.print),
+                label: const Text("Imprimer Manifeste"),
+              ),
+            ),
           ),
+
         ],
       ),
     );

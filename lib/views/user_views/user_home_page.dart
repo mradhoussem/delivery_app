@@ -21,26 +21,34 @@ class _UserHomePageState extends State<UserHomePage> {
   int _selectedIndex = 0;
   String _username = "Utilisateur";
   String? _userid;
+  String? _selectedStatus;
   bool _isSidebarOpen = true;
 
-  // NEW: Track which indices have been visited
   late List<bool> _activatedPages;
-
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    // Initialize with first page active, others false
-    _activatedPages = List.generate(6, (index) => index == 0);
+    _activatedPages = List.generate(10, (index) => index == 0);
     _loadUserInfo();
   }
 
   Future<void> _loadUserInfo() async {
     final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _username = prefs.getString('username') ?? "Expéditeur";
+        _userid = prefs.getString('user_id');
+      });
+    }
+  }
+
+  void _navigateToTab(int index, {String? status}) {
     setState(() {
-      _username = prefs.getString('username') ?? "Expéditeur";
-      _userid = prefs.getString('user_id');
+      _selectedIndex = index;
+      _selectedStatus = status;
+      _activatedPages[index] = true;
     });
   }
 
@@ -57,12 +65,21 @@ class _UserHomePageState extends State<UserHomePage> {
       RwSideBarItem(
         title: "Tableau de bord",
         icon: Icons.dashboard,
-        page: DashboardUserPage(userId: _userid!, username: _username),
+        page: DashboardUserPage(
+          userId: _userid!,
+          username: _username,
+          onNavigate: _navigateToTab,
+        ),
       ),
       RwSideBarItem(
         title: "Mes Colis",
         icon: Icons.inventory_2,
-        page: PackagesListPage(userId: _userid!),
+        page: PackagesListPage(
+          // La Key force le widget à se reconstruire si le statut change
+          key: ValueKey(_selectedStatus),
+          userId: _userid!,
+          initialStatus: _selectedStatus,
+        ),
       ),
       RwSideBarItem(
         title: "Colis en attente",
@@ -112,14 +129,16 @@ class _UserHomePageState extends State<UserHomePage> {
                   child: _userid == null
                       ? const Center(child: CircularProgressIndicator())
                       : IndexedStack(
-                          index: _selectedIndex,
-                          // Only show the real page if it has been activated, otherwise show empty
-                          children: items.asMap().entries.map((entry) {
-                            return _activatedPages[entry.key]
-                                ? entry.value.page
-                                : const SizedBox.shrink();
-                          }).toList(),
-                        ),
+                    index: _selectedIndex,
+                    children: items.map((item) {
+                      int idx = items.indexOf(item);
+                      return item.page != null
+                          ? (_activatedPages[idx]
+                          ? item.page!
+                          : const SizedBox.shrink())
+                          : const SizedBox.shrink();
+                    }).toList(),
+                  ),
                 ),
               ],
             ),
@@ -135,12 +154,10 @@ class _UserHomePageState extends State<UserHomePage> {
       items: items,
       primaryColor: DefaultColors.primary,
       backgroundColor: Colors.white,
-      portalTitle: "",
+      portalTitle: "MENU",
       onItemSelected: (index) {
-        setState(() {
-          _selectedIndex = index;
-          _activatedPages[index] = true; // Activate the page when clicked
-        });
+        // Reset du statut si on clique manuellement sur le menu latéral
+        _navigateToTab(index, status: null);
       },
       onLogout: _handleLogout,
     );
