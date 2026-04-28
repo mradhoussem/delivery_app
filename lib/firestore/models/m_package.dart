@@ -1,6 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:delivery_app/firestore/enums/e_governorate.dart';
 import 'package:delivery_app/firestore/enums/e_packages_status.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PackageModel {
   final String id;
@@ -11,8 +11,9 @@ class PackageModel {
   final EGovernorate governorate;
   final String address;
   final double amount;
-  final double deliveryCost; // <--- NEW FIELD
+  final double deliveryCost;
   final bool isExchange;
+  final String? productDesignation; // <--- NOUVEAU CHAMP
   final String? packageDesignation;
   final String? comment;
   final EPackageStatus status;
@@ -29,8 +30,9 @@ class PackageModel {
     required this.governorate,
     required this.address,
     required this.amount,
-    required this.deliveryCost, // <--- NEW FIELD
+    required this.deliveryCost,
     this.isExchange = false,
+    this.productDesignation, // <--- NOUVEAU CHAMP
     this.packageDesignation,
     this.comment,
     this.status = EPackageStatus.waiting,
@@ -48,8 +50,9 @@ class PackageModel {
     EGovernorate? governorate,
     String? address,
     double? amount,
-    double? deliveryCost, // <--- ADDED
+    double? deliveryCost,
     bool? isExchange,
+    String? productDesignation, // <--- NOUVEAU
     String? packageDesignation,
     String? comment,
     EPackageStatus? status,
@@ -66,8 +69,10 @@ class PackageModel {
       governorate: governorate ?? this.governorate,
       address: address ?? this.address,
       amount: amount ?? this.amount,
-      deliveryCost: deliveryCost ?? this.deliveryCost, // <--- ADDED
+      deliveryCost: deliveryCost ?? this.deliveryCost,
       isExchange: isExchange ?? this.isExchange,
+      productDesignation: productDesignation ?? this.productDesignation,
+      // <--- NOUVEAU
       packageDesignation: packageDesignation ?? this.packageDesignation,
       comment: comment ?? this.comment,
       status: status ?? this.status,
@@ -86,8 +91,9 @@ class PackageModel {
       'governorate': governorate.name,
       'address': address,
       'amount': amount,
-      'deliveryCost': deliveryCost, // <--- ADDED
+      'deliveryCost': deliveryCost,
       'isExchange': isExchange,
+      'productDesignation': productDesignation, // <--- NOUVEAU
       'packageDesignation': packageDesignation,
       'comment': comment,
       'status': status.name,
@@ -107,8 +113,10 @@ class PackageModel {
       governorate: EGovernorateExtension.fromName(data['governorate'] ?? ''),
       address: data['address'] ?? '',
       amount: _parseDouble(data['amount']),
-      deliveryCost: _parseDouble(data['deliveryCost']), // <--- ADDED
+      deliveryCost: _parseDouble(data['deliveryCost']),
       isExchange: data['isExchange'] ?? false,
+      productDesignation: data['productDesignation'],
+      // <--- NOUVEAU
       packageDesignation: data['packageDesignation'],
       comment: data['comment'],
       status: EPackageStatus.values.firstWhere(

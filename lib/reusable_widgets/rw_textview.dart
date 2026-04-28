@@ -23,7 +23,7 @@ class RwTextview extends StatefulWidget {
     this.validator,
     this.maxLength,
     this.minLength,
-    this.onSubmitted, // Nouvelle propriété
+    this.onSubmitted,
   });
 
   final TextEditingController controller;
@@ -45,7 +45,7 @@ class RwTextview extends StatefulWidget {
   final FormFieldValidator? validator;
   final int? maxLength;
   final int? minLength;
-  final ValueChanged<String>? onSubmitted; // Nouvelle propriété
+  final ValueChanged<String>? onSubmitted;
 
   @override
   State<RwTextview> createState() => _RwTextviewState();
@@ -61,33 +61,27 @@ class _RwTextviewState extends State<RwTextview> {
   }
 
   String? _validateInput(String? value) {
-    // 1. Validateur externe (prioritaire)
     if (widget.validator != null) {
       final externalResult = widget.validator!(value);
       if (externalResult != null) return externalResult;
     }
 
-    // Si la valeur est nulle ou vide, on s'arrête là (la gestion du "Requis" est faite en externe)
     if (value == null || value.isEmpty) return null;
 
-    // 2. Validation Longueur Minimum
     if (widget.minLength != null && value.length < widget.minLength!) {
       return 'Minimum ${widget.minLength} caractères';
     }
 
-    // 3. Validation Double (Montant)
     if (widget.textDouble == true) {
       final n = double.tryParse(value);
       if (n == null) return 'Format numérique invalide';
     }
 
-    // 4. Validation Email
     if (widget.isEmail == true) {
       final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
       if (!emailRegex.hasMatch(value)) return 'Email invalide';
     }
 
-    // 5. Validation Password (si pas de minLength défini, défaut à 8)
     if (widget.isPassword == true && widget.minLength == null) {
       if (value.length < 8) return 'Minimum 8 caractères';
     }
@@ -101,34 +95,25 @@ class _RwTextviewState extends State<RwTextview> {
       controller: widget.controller,
       validator: _validateInput,
       onFieldSubmitted: widget.onSubmitted,
-      // Liaison ici
       obscureText: widget.isPassword == true ? _obscure : false,
       maxLength: widget.maxLength,
-      // Limite physique de saisie
       maxLengthEnforcement: MaxLengthEnforcement.enforced,
       style: TextStyle(color: widget.textColor),
-
       keyboardType: (widget.textNumeric == true || widget.textDouble == true)
           ? const TextInputType.numberWithOptions(decimal: true)
           : widget.isEmail == true
           ? TextInputType.emailAddress
           : TextInputType.text,
-
       inputFormatters: [
         if (widget.textNumeric == true && widget.textDouble == false)
           FilteringTextInputFormatter.digitsOnly,
-
         if (widget.textDouble == true)
-          // Modified Regex: Allows digits, and IF there is a dot, allows max 3 digits after it
           FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}')),
       ],
-
       decoration: InputDecoration(
         counterText: "",
-        // Masque le compteur par défaut si vous voulez un design épuré
         filled: widget.backgroundColor != null ? true : false,
         fillColor: widget.backgroundColor,
-
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
           vertical: 15,
@@ -137,7 +122,6 @@ class _RwTextviewState extends State<RwTextview> {
         labelStyle: TextStyle(color: widget.labelColor),
         hintText: widget.hint,
         hintStyle: TextStyle(color: widget.hintColor),
-
         prefixIcon: widget.isPassword == true
             ? IconButton(
                 icon: Icon(
@@ -150,11 +134,9 @@ class _RwTextviewState extends State<RwTextview> {
             : widget.prefixIcon != null
             ? Icon(widget.prefixIcon!, size: 18, color: widget.iconColor)
             : null,
-
         suffixIcon: widget.suffixIcon != null
             ? Icon(widget.suffixIcon!, size: 18, color: widget.iconColor)
             : null,
-
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(

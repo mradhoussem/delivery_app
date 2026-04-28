@@ -6,9 +6,9 @@ import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:delivery_app/tools/refresh_notifier.dart';
 
 class AddPackagePage extends StatefulWidget {
   const AddPackagePage({super.key});
@@ -27,6 +27,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
   final TextEditingController _phone2Controller = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _productDesignationController = TextEditingController(); // <--- NOUVEAU
   final TextEditingController _designationController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
 
@@ -42,6 +43,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
     _phone2Controller.dispose();
     _addressController.dispose();
     _amountController.dispose();
+    _productDesignationController.dispose(); // <--- NOUVEAU
     _designationController.dispose();
     _commentController.dispose();
     super.dispose();
@@ -61,49 +63,42 @@ class _AddPackagePageState extends State<AddPackagePage> {
         throw Exception('Session expirée.');
       }
 
-      // Create the draft model.
-      // deliveryCost is 0.0 here, but addPackageWithAutoCost will fetch the correct one.
       final newPackage = PackageModel(
         id: '',
         firstName: _fNameController.text.trim(),
         lastName: _lNameController.text.trim(),
         phone1: _phone1Controller.text.trim(),
-        phone2: _phone2Controller.text.trim().isEmpty
-            ? null
-            : _phone2Controller.text.trim(),
+        phone2: _phone2Controller.text
+            .trim()
+            .isEmpty ? null : _phone2Controller.text.trim(),
         governorate: EGovernorateExtension.fromName(_selectedGov!),
         address: _addressController.text.trim(),
         amount: double.parse(
-          _amountController.text.trim().replaceAll(',', '.'),
-        ),
+            _amountController.text.trim().replaceAll(',', '.')),
         deliveryCost: 0.0,
-        // <--- Placeholder
         isExchange: _isExchange,
+        productDesignation: _productDesignationController.text
+            .trim()
+            .isEmpty ? null : _productDesignationController.text.trim(),
+        // <--- NOUVEAU
         packageDesignation: _isExchange
             ? _designationController.text.trim()
             : null,
-        comment: _commentController.text.trim().isEmpty
-            ? null
-            : _commentController.text.trim(),
+        comment: _commentController.text
+            .trim()
+            .isEmpty ? null : _commentController.text.trim(),
         status: EPackageStatus.waiting,
         createdAt: DateTime.now(),
         creatorUserId: userId,
         creatorUsername: username,
       );
 
-      // ✅ Use the new automated method
-      final docRef = await _db.addPackage(
-        package: newPackage,
-        userId: userId,
-      );
-
-      // Re-fetch or copy with the real ID for the dialog
+      final docRef = await _db.addPackage(package: newPackage, userId: userId);
       final savedPackage = newPackage.copyWith(id: docRef.id);
 
       if (mounted) {
         RefreshNotifier().notifyRefresh();
         setState(() => _isLoading = false);
-
         RdPrintSavePackage.show(
           context,
           savedPackage,
@@ -121,8 +116,6 @@ class _AddPackagePageState extends State<AddPackagePage> {
       }
     }
   }
-
-  // --- Build UI (Unchanged but included for completeness) ---
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +187,9 @@ class _AddPackagePageState extends State<AddPackagePage> {
                 value: _selectedGov,
                 items: EGovernorate.values.map((e) => e.name).toList(),
                 itemLabelBuilder: (name) =>
-                    EGovernorateExtension.fromName(name).label,
+                EGovernorateExtension
+                    .fromName(name)
+                    .label,
                 onChanged: (val) => setState(() => _selectedGov = val),
               ),
               const SizedBox(height: 15),
@@ -202,6 +197,15 @@ class _AddPackagePageState extends State<AddPackagePage> {
                 controller: _addressController,
                 hint: 'Adresse exacte',
                 prefixIcon: Icons.location_on_outlined,
+                iconColor: DefaultColors.primary,
+                validator: (v) => v!.isEmpty ? 'Requis' : null,
+              ),
+              const SizedBox(height: 15),
+              RwTextview(
+                controller: _productDesignationController,
+                // <--- NOUVEAU CHAMP
+                hint: 'Désignation du produit (Ex: Chaussures)',
+                prefixIcon: Icons.shopping_bag_outlined,
                 iconColor: DefaultColors.primary,
                 validator: (v) => v!.isEmpty ? 'Requis' : null,
               ),
@@ -298,9 +302,9 @@ class _AddPackagePageState extends State<AddPackagePage> {
         child: _isLoading
             ? const CircularProgressIndicator(color: Colors.white)
             : const Text(
-                "CONFIRMER L'EXPÉDITION",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+          "CONFIRMER L'EXPÉDITION",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
       ),
     );
   }

@@ -34,7 +34,9 @@ class RdPrintSavePermanentReturn {
                   color: DefaultColors.primary,
                   onTap: () async {
                     await PdfPermanentReturn.printList(packages);
-                    Navigator.pop(ctx);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                    }
                   },
                 ),
                 const SizedBox(height: 10),
@@ -44,7 +46,9 @@ class RdPrintSavePermanentReturn {
                   color: Colors.green,
                   onTap: () async {
                     await PdfPermanentReturn.saveList(packages);
-                    Navigator.pop(ctx);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                    }
                   },
                 ),
                 TextButton(

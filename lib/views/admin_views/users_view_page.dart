@@ -128,7 +128,7 @@ class _UsersViewPageState extends State<UsersViewPage> {
         },
         icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
         label: const Text(
-          "NOUVEAU expéditeur",
+          "NOUVEAU EXPÉDITEUR",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
       ),
@@ -182,7 +182,7 @@ class _UsersViewPageState extends State<UsersViewPage> {
             borderRadius: BorderRadius.circular(15),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -191,7 +191,7 @@ class _UsersViewPageState extends State<UsersViewPage> {
           child: ListTile(
             onTap: () => _showUserDetails(context, user),
             leading: CircleAvatar(
-              backgroundColor: DefaultColors.primary.withOpacity(0.1),
+              backgroundColor: DefaultColors.primary.withValues(alpha: 0.1),
               child: Text(
                 user.username.isNotEmpty ? user.username[0].toUpperCase() : "?",
                 style: const TextStyle(
@@ -244,6 +244,8 @@ class _UsersViewPageState extends State<UsersViewPage> {
           children: [
             _detailRow("Identifiant:", "@${user.username}"),
             _detailRow("Nom complet:", "${user.firstName} ${user.lastName}"),
+            if(user.email != null && user.email != "" )
+              _detailRow("Email:", "${user.email}"),
             _detailRow("Téléphone 1:", user.phone1),
             if (user.phone2.isNotEmpty) _detailRow("Téléphone 2:", user.phone2),
             _detailRow("Frais Livraison:", "${user.deliveryCosts} TND"),

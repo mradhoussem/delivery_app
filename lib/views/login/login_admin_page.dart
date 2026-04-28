@@ -40,19 +40,7 @@ class _LoginAdminPageState extends State<LoginAdminPage> {
         await prefs.setString('admin_email', email);
 
         if (mounted) {
-          final snackBarController = ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Connexion réussie !"),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 1),
-            ),
-          );
-          await snackBarController.closed;
-        }
-
-        if (mounted) {
           if (mounted) {
-            Navigator.pop(context);
             Navigator.pushReplacementNamed(context, '/adminHome');
           }
         }

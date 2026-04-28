@@ -1,14 +1,15 @@
+import 'package:delivery_app/reusable_widgets/rw_appbar.dart';
+import 'package:delivery_app/reusable_widgets/rw_sidebar.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar_item.dart';
+import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/views/user_views/dashboard_user_page.dart';
+import 'package:delivery_app/views/user_views/packages_list_page.dart';
 import 'package:delivery_app/views/user_views/packages_payed_list_page.dart';
 import 'package:delivery_app/views/user_views/packages_recieved_list_page.dart';
 import 'package:delivery_app/views/user_views/packages_waiting_list_page.dart';
+import 'package:delivery_app/views/user_views/user_edit_password_page.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:delivery_app/tools/default_colors.dart';
-import 'package:delivery_app/reusable_widgets/rw_appbar.dart';
-import 'package:delivery_app/reusable_widgets/rw_sidebar.dart';
-import 'package:delivery_app/views/user_views/dashboard_user_page.dart';
-import 'package:delivery_app/views/user_views/packages_list_page.dart';
 
 class UserHomePage extends StatefulWidget {
   const UserHomePage({super.key});
@@ -95,6 +96,11 @@ class _UserHomePageState extends State<UserHomePage> {
         title: "Mes retours",
         icon: Icons.inventory_outlined,
         page: PackagesReceivedListPage(userId: _userid!),
+      ),
+      RwSideBarItem(
+        title: "Mettre à jour le mot de passe",
+        icon: Icons.password,
+        page: const UserEditPasswordPage(),
       ),
     ];
   }

@@ -4,7 +4,6 @@ import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_expandable_widget.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
-import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:delivery_app/views/user_views/package_item_card.dart';
 import 'package:flutter/material.dart';
@@ -120,8 +119,9 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
     );
   }
   Widget _buildBody() {
-    if (_isLoading && _packages.isEmpty)
+    if (_isLoading && _packages.isEmpty) {
       return const Center(child: CircularProgressIndicator());
+    }
     if (_hasError) return _buildErrorState();
     if (_packages.isEmpty) return _buildEmptyState();
     return ListView.separated(
@@ -142,8 +142,6 @@ class _PackagesAdminPageState extends State<PackagesAdminPage> {
         children: [
           const Text("Flux Global",
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-          IconButton(onPressed: _isLoading ? null : _resetAndReload,
-              icon: const Icon(Icons.refresh, color: DefaultColors.primary)),
         ],
       ),
     );

@@ -180,10 +180,8 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
+
+          const Text(
                 "Colis retournés",
                 style: TextStyle(
                   fontSize: 26,
@@ -191,8 +189,6 @@ class _PackagesReceivedListPageState extends State<PackagesReceivedListPage> {
                   color: DefaultColors.textPrimary,
                 ),
               ),
-            ],
-          ),
           const SizedBox(height: 15),
           RwExpandableWidget(
             child: Column(

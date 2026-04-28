@@ -5,10 +5,11 @@ class UserModel {
   final String username;
   final String firstName;
   final String lastName;
+  final String? email; // Added optional email
   final String phone1;
   final String phone2;
   final String role;
-  final double deliveryCosts; // New required field
+  final double deliveryCosts;
   final DateTime createdAt;
 
   const UserModel({
@@ -16,6 +17,7 @@ class UserModel {
     required this.username,
     required this.firstName,
     required this.lastName,
+    this.email, // Optional
     required this.phone1,
     required this.phone2,
     required this.role,
@@ -28,6 +30,7 @@ class UserModel {
     String? username,
     String? firstName,
     String? lastName,
+    String? email,
     String? phone1,
     String? phone2,
     String? role,
@@ -39,6 +42,7 @@ class UserModel {
       username: username ?? this.username,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
+      email: email ?? this.email,
       phone1: phone1 ?? this.phone1,
       phone2: phone2 ?? this.phone2,
       role: role ?? this.role,
@@ -53,6 +57,8 @@ class UserModel {
       username: data['username'] ?? 'Inconnu',
       firstName: data['firstName'] ?? '',
       lastName: data['lastName'] ?? '',
+      email: data['email'],
+      // Fetch from map
       phone1: data['phone1'] ?? '',
       phone2: data['phone2'] ?? '',
       role: data['role'] ?? 'user',
@@ -67,6 +73,7 @@ class UserModel {
       'username': username,
       'firstName': firstName,
       'lastName': lastName,
+      'email': email, // Add to map
       'phone1': phone1,
       'phone2': phone2,
       'role': role,

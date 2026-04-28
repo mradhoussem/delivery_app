@@ -64,8 +64,9 @@ class _EditPasswordPageState extends State<EditPasswordPage> {
                 isPassword: true,
                 iconColor: DefaultColors.primary,
                 validator: (v) {
-                  if (v != _passController.text)
+                  if (v != _passController.text) {
                     return "Les mots de passe ne correspondent pas";
+                  }
                   return null;
                 },
               ),

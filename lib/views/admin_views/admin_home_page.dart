@@ -134,8 +134,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
 
         periodLabel = "${dateResult['month'].toString().padLeft(
             2, '0')}/${dateResult['year']}";
-
-        LoadingOverlay.show(context);
+        if (mounted) {
+          LoadingOverlay.show(context);
+        }
         // Utilisation du filtre userId (creatorId)
         final snapshot = await _db.getAdminPackagesPaged(
           status: EPackageStatus.payed,
@@ -166,13 +167,14 @@ class _AdminHomePageState extends State<AdminHomePage> {
       }
 
       // Appel des dialogues PDF existants
+      if(mounted){
       if (status == EPackageStatus.waiting) {
         await RdPrintSaveWaitingPackages.show(context, list);
       } else if (status == EPackageStatus.permanentReturn) {
         await RdPrintSavePermanentReturn.show(context, list);
       } else if (status == EPackageStatus.payed) {
         await RdPrintSavePayedPackages.show(context, list, periodLabel);
-      }
+      }}
     } catch (e) {
       if (mounted) {
         LoadingOverlay.hide(context);
@@ -291,12 +293,12 @@ class _AdminHomePageState extends State<AdminHomePage> {
       ),
       RwSideBarItem(
         title: "Imprimer Retours",
-        icon: Icons.keyboard_return,
+        icon: Icons.print,
         onTap: () => _showUserSelectionDialog(EPackageStatus.permanentReturn),
       ),
       RwSideBarItem(
         title: "Imprimer Payés",
-        icon: Icons.payments,
+        icon: Icons.print,
         onTap: () => _showUserSelectionDialog(EPackageStatus.payed),
       ),
     ];
@@ -356,7 +358,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
       unselectedColor: Colors.white70,
       onItemSelected: (index) {
         if (items[index].onTap != null) {
-          items[index].onTap!();
+          Navigator.of(context).maybePop(); // close drawer first
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            items[index].onTap!();
+          });
         } else {
           setState(() {
             _selectedIndex = index;

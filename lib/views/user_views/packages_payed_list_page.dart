@@ -177,6 +177,16 @@ class _PackagesPayedListPageState extends State<PackagesPayedListPage> {
 
           return Column(
             children: [
+              const Text(
+                "Colis Payées",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: DefaultColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 15),
+
               // 1. RW EXPANDABLE (Contient Header sur Mobile, Header + Table sur Web)
               RwExpandableWidget(
                 child: isWideScreen
