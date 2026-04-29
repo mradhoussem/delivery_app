@@ -2,21 +2,48 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/models/m_user.dart';
-import 'package:flutter/foundation.dart';
+import 'package:delivery_app/main.dart'; // Assure-toi que navigatorKey est ici
+import 'package:flutter/material.dart';
 
 class PackageDB {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final String _collection = 'packages';
 
+  /// Gestionnaire d'erreurs centralisé pour les quotas Firestore
+  void _handleFirestoreError(Object e) {
+    if (e is FirebaseException && e.code == 'resource-exhausted') {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              AlertDialog(
+                title: const Text('Limite atteinte'),
+                content: const Text(
+                    'La limite quotidienne gratuite de la base de données a été atteinte. '
+                        'L’application sera de nouveau opérationnelle demain.'
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+      }
+    }
+  }
+
   CollectionReference<PackageModel> get _packageRef => _db
       .collection(_collection)
       .withConverter<PackageModel>(
-        fromFirestore: (snapshot, _) =>
-            PackageModel.fromMap(snapshot.data()!, snapshot.id),
-        toFirestore: (package, _) => package.toMap(),
-      );
+    fromFirestore: (snapshot, _) =>
+        PackageModel.fromMap(snapshot.data()!, snapshot.id),
+    toFirestore: (package, _) => package.toMap(),
+  );
 
-  /// ✅ NEW: Automatically fetches the user's specific delivery cost and saves the package
   Future<DocumentReference> addPackage({
     required PackageModel package,
     required String userId,
@@ -43,17 +70,15 @@ class PackageDB {
 
       return await _packageRef.add(finalPackage);
     } catch (e) {
-      debugPrint("AutoCost Save Error: $e");
+      _handleFirestoreError(e);
       rethrow;
     }
   }
 
-  // --- Existing Methods (RESTORED) ---
-
   Future<QuerySnapshot<PackageModel>> getPackagesByUserPaged({
     required String userId,
     String? exactPhone,
-    String? status, // Assure-toi que ce paramètre est bien là
+    String? status,
     DocumentSnapshot? startAt,
     int limit = 10,
     bool descending = false,
@@ -64,7 +89,6 @@ class PackageDB {
         isEqualTo: userId,
       );
 
-      // AJOUTE CETTE CONDITION :
       if (status != null && status.isNotEmpty) {
         query = query.where('status', isEqualTo: status);
       }
@@ -82,25 +106,25 @@ class PackageDB {
       if (startAt != null) query = query.startAfterDocument(startAt);
       return await query.limit(limit).get();
     } catch (e) {
+      _handleFirestoreError(e);
       rethrow;
     }
   }
 
   Future<QuerySnapshot<PackageModel>> getPackagesByUserByStatusPaged({
     required String userId,
-    required List<EPackageStatus> statuses, // Changé de EPackageStatus à List
+    required List<EPackageStatus> statuses,
     String? exactPhone,
     DocumentSnapshot? startAt,
     int limit = 10,
     bool descending = true,
   }) async {
     try {
-      // Conversion de la liste d'enums en liste de Strings pour Firestore
       List<String> statusNames = statuses.map((e) => e.name).toList();
 
       Query<PackageModel> query = _packageRef
           .where('creatorUserId', isEqualTo: userId)
-          .where('status', whereIn: statusNames); // Utilisation de whereIn
+          .where('status', whereIn: statusNames);
 
       if (exactPhone != null && exactPhone.isNotEmpty) {
         query = query.where(
@@ -114,6 +138,7 @@ class PackageDB {
       if (startAt != null) query = query.startAfterDocument(startAt);
       return await query.limit(limit).get();
     } catch (e) {
+      _handleFirestoreError(e);
       rethrow;
     }
   }
@@ -134,6 +159,7 @@ class PackageDB {
           .map((doc) => PackageModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
+      _handleFirestoreError(e);
       return [];
     }
   }
@@ -151,13 +177,13 @@ class PackageDB {
       final snapshot = await query.count().get();
       return snapshot.count ?? 0;
     } catch (e) {
+      _handleFirestoreError(e);
       return 0;
     }
   }
 
-
   Future<QuerySnapshot<PackageModel>> getAdminPackagesPaged({
-    EPackageStatus? status, // Nouveau paramètre
+    EPackageStatus? status,
     String? searchUsername,
     String? searchPhone,
     DocumentSnapshot? startAt,
@@ -167,12 +193,10 @@ class PackageDB {
     try {
       Query<PackageModel> query = _packageRef;
 
-      // 1. Filtre d'égalité pour le statut (toujours en premier)
       if (status != null) {
         query = query.where('status', isEqualTo: status.name);
       }
 
-      // 2. Filtre de recherche par téléphone (Filtre OR)
       if (searchPhone != null && searchPhone.isNotEmpty) {
         query = query.where(
           Filter.or(
@@ -182,7 +206,6 @@ class PackageDB {
         );
       }
 
-      // 3. Filtre de recherche par nom (Filtre d'inégalité)
       if (searchUsername != null && searchUsername.isNotEmpty) {
         query = query
             .where('creatorUsername', isGreaterThanOrEqualTo: searchUsername)
@@ -190,18 +213,15 @@ class PackageDB {
           'creatorUsername',
           isLessThanOrEqualTo: '$searchUsername\uf8ff',
         )
-            .orderBy('creatorUsername'); // Doit être le premier orderBy si filtré
+            .orderBy('creatorUsername');
       }
 
-      // 4. Tri par date de création
       query = query.orderBy('createdAt', descending: descending);
-
-      // 5. Pagination
       if (startAt != null) query = query.startAfterDocument(startAt);
 
       return await query.limit(limit).get();
     } catch (e) {
-      debugPrint("Erreur Firestore: $e");
+      _handleFirestoreError(e);
       rethrow;
     }
   }
@@ -211,27 +231,16 @@ class PackageDB {
     required int year,
     required int month,
   }) async {
-    final snapshot = await _packageRef
-        .where('creatorId', isEqualTo: userId)
-        .where('status', isEqualTo: EPackageStatus.payed.name)
-    // Vous devrez peut-être filtrer sur un champ 'paymentDate' ou 'createdAt'
-    // selon votre structure Firestore
-        .get();
-
-    return snapshot.docs.map((doc) => doc.data()).toList();
-  }
-
-// Récupérer les colis par statut pour un utilisateur spécifique
-  Future<List<PackageModel>> getUserPackagesByStatus({
-    required String userId,
-    required EPackageStatus status,
-  }) async {
-    final snapshot = await _packageRef
-        .where('creatorId', isEqualTo: userId)
-        .where('status', isEqualTo: status.name)
-        .get();
-
-    return snapshot.docs.map((doc) => doc.data()).toList();
+    try {
+      final snapshot = await _packageRef
+          .where('creatorId', isEqualTo: userId)
+          .where('status', isEqualTo: EPackageStatus.payed.name)
+          .get();
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 
   Future<List<PackageModel>> getAdminPackagesByStatus({
@@ -245,11 +254,10 @@ class PackageDB {
           .get();
 
       return snapshot.docs
-          .map((doc) =>
-          PackageModel.fromMap(doc.data(), doc.id))
+          .map((doc) => PackageModel.fromMap(doc.data(), doc.id))
           .toList();
     } catch (e) {
-      debugPrint("Error fetching packages by status: $e");
+      _handleFirestoreError(e);
       return [];
     }
   }
@@ -259,14 +267,9 @@ class PackageDB {
     required int month,
   }) async {
     try {
-      // 1. Define the start of the month (e.g., 2026-04-01 00:00:00)
       final DateTime startOfMonth = DateTime(year, month, 1);
-
-      // 2. Define the end of the month (e.g., 2026-05-01 00:00:00, then subtract 1 ms)
-      // Or more simply: DateTime(year, month + 1, 0, 23, 59, 59)
       final DateTime endOfMonth = DateTime(year, month + 1, 0, 23, 59, 59, 999);
 
-      // 3. Query Firestore with range filters
       final snapshot = await _db
           .collection(_collection)
           .where('status', isEqualTo: EPackageStatus.payed.name)
@@ -275,25 +278,22 @@ class PackageDB {
           .orderBy('createdAt', descending: true)
           .get();
 
-      // 4. Map the documents to your PackageModel
-      return snapshot.docs.map((doc) {
-        return PackageModel.fromMap(
-          doc.data(),
-          doc.id,
-        );
-      }).toList();
+      return snapshot.docs.map((doc) =>
+          PackageModel.fromMap(doc.data(), doc.id)).toList();
     } catch (e) {
-      debugPrint("Error fetching paid packages for report: $e");
+      _handleFirestoreError(e);
       return [];
     }
   }
 
-
-  Future<void> updatePackageFields(
-    String packageId,
-    Map<String, dynamic> data,
-  ) async {
-    await _db.collection(_collection).doc(packageId).update(data);
+  Future<void> updatePackageFields(String packageId,
+      Map<String, dynamic> data) async {
+    try {
+      await _db.collection(_collection).doc(packageId).update(data);
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 
   Future<void> updateStatus(String packageId, EPackageStatus newStatus) async {
@@ -303,21 +303,30 @@ class PackageDB {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
-      debugPrint("Error updating status: $e");
+      _handleFirestoreError(e);
       rethrow;
     }
   }
 
   Future<void> deletePackage(String packageId) async {
-    await _db.collection(_collection).doc(packageId).delete();
+    try {
+      await _db.collection(_collection).doc(packageId).delete();
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 
   Future<PackageModel?> getPackageById(String packageId) async {
-    final doc = await _packageRef.doc(packageId).get();
-    return doc.data();
+    try {
+      final doc = await _packageRef.doc(packageId).get();
+      return doc.data();
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 
-  /// ✅ NEW: Fetches paid packages filtered by year and month strings
   Future<QuerySnapshot<PackageModel>> getPaidPackagesByDatePaged({
     required String userId,
     required String yearStr,
@@ -337,18 +346,15 @@ class PackageDB {
           .where('creatorUserId', isEqualTo: userId)
           .where('status', isEqualTo: 'payed')
           .where(
-            'createdAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
-          )
+          'createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
           .where(
-            'createdAt',
-            isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth),
-          )
+          'createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
           .orderBy('createdAt', descending: descending);
 
       if (startAt != null) query = query.startAfterDocument(startAt);
       return await query.limit(limit).get();
     } catch (e) {
+      _handleFirestoreError(e);
       rethrow;
     }
   }
@@ -369,13 +375,9 @@ class PackageDB {
           .where('creatorUserId', isEqualTo: userId)
           .where('status', isEqualTo: 'payed')
           .where(
-            'createdAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth),
-          )
+          'createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
           .where(
-            'createdAt',
-            isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth),
-          )
+          'createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
           .get();
 
       double totalAmount = 0;
@@ -395,24 +397,15 @@ class PackageDB {
         'net': totalAmount - totalDelivery,
       };
     } catch (e) {
+      _handleFirestoreError(e);
       rethrow;
     }
   }
 
   int _getMonthNumber(String monthName) {
     final months = [
-      "Janvier",
-      "Février",
-      "Mars",
-      "Avril",
-      "Mai",
-      "Juin",
-      "Juillet",
-      "Août",
-      "Septembre",
-      "Octobre",
-      "Novembre",
-      "Décembre",
+      "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
+      "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
     ];
     return months.indexOf(monthName) + 1;
   }

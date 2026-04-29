@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:delivery_app/main.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:delivery_app/firestore/models/m_user.dart';
@@ -11,60 +13,107 @@ class UserDB {
     return sha256.convert(bytes).toString();
   }
 
+  /// Gère l'affichage d'une alerte si le quota Firestore est épuisé
+  void _handleFirestoreError(Object e) {
+    if (e is FirebaseException && e.code == 'resource-exhausted') {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Limite atteinte'),
+            content: const Text(
+                'La limite quotidienne gratuite de la base de données a été atteinte. '
+                    'L’application sera de nouveau opérationnelle demain.'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
   Future<UserModel?> loginUser({
     required String username,
     required String password,
   }) async {
-    final String hashedInput = _hashPassword(password);
-    // Convert to lowercase for case-insensitive login
-    final String normalizedUsername = username.toLowerCase();
+    try {
+      final String hashedInput = _hashPassword(password);
+      final String normalizedUsername = username.toLowerCase();
 
-    final query = await _db
-        .collection('users')
-        .where('username', isEqualTo: normalizedUsername)
-        .where('password', isEqualTo: hashedInput)
-        .limit(1)
-        .get();
+      final query = await _db
+          .collection('users')
+          .where('username', isEqualTo: normalizedUsername)
+          .where('password', isEqualTo: hashedInput)
+          .limit(1)
+          .get();
 
-    if (query.docs.isNotEmpty) {
-      return UserModel.fromMap(
-        query.docs.first.data(),
-        id: query.docs.first.id,
-      );
+      if (query.docs.isNotEmpty) {
+        return UserModel.fromMap(
+          query.docs.first.data(),
+          id: query.docs.first.id,
+        );
+      }
+      return null;
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
     }
-    return null;
   }
 
   Future<List<UserModel>> getAllUsers() async {
-    final snapshot = await _db.collection('users').get();
-    return snapshot.docs
-        .map((doc) => UserModel.fromMap(doc.data(), id: doc.id))
-        .toList();
+    try {
+      final snapshot = await _db.collection('users').get();
+      return snapshot.docs
+          .map((doc) => UserModel.fromMap(doc.data(), id: doc.id))
+          .toList();
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 
-
   Future<void> addUser(UserModel user, String rawPassword) async {
-    Map<String, dynamic> data = user.toMap();
-    // Normalize username to lowercase before saving
-    data['username'] = user.username.toLowerCase();
-    data['password'] = _hashPassword(rawPassword);
-    await _db.collection('users').add(data);
+    try {
+      Map<String, dynamic> data = user.toMap();
+      data['username'] = user.username.toLowerCase();
+      data['password'] = _hashPassword(rawPassword);
+      await _db.collection('users').add(data);
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 
   Future<void> updatePassword(String userId, String newRawPassword) async {
-    final String hashedNewPassword = _hashPassword(newRawPassword);
-    await _db.collection('users').doc(userId).update({
-      'password': hashedNewPassword,
-    });
+    try {
+      final String hashedNewPassword = _hashPassword(newRawPassword);
+      await _db.collection('users').doc(userId).update({
+        'password': hashedNewPassword,
+      });
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 
   Future<bool> checkUsernameExists(String username) async {
-    // Convert to lowercase to check against stored lowercase usernames
-    final String normalizedUsername = username.toLowerCase();
-    final query = await _db
-        .collection('users')
-        .where('username', isEqualTo: normalizedUsername)
-        .get();
-    return query.docs.isNotEmpty;
+    try {
+      final String normalizedUsername = username.toLowerCase();
+      final query = await _db
+          .collection('users')
+          .where('username', isEqualTo: normalizedUsername)
+          .get();
+      return query.docs.isNotEmpty;
+    } catch (e) {
+      _handleFirestoreError(e);
+      rethrow;
+    }
   }
 }

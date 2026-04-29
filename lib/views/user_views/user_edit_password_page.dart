@@ -27,8 +27,9 @@ class _UserEditPasswordPageState extends State<UserEditPasswordPage> {
       final prefs = await SharedPreferences.getInstance();
       final String? userId = prefs.getString('user_id');
 
-      if (userId == null)
+      if (userId == null) {
         throw Exception("Session expirée. Veuillez vous reconnecter.");
+      }
 
       // Utilisation de la méthode updatePassword de votre UserDB (hachage SHA-256 inclus)
       await _userDb.updatePassword(userId, _passwordController.text.trim());

@@ -12,6 +12,9 @@ import 'auth_security/admin_guard.dart';
 import 'firestore/firebase_options.dart';
 import 'init/init_page.dart';
 
+// Global key to allow showing dialogs from the database class
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 // Custom Scroll Behavior to enable Mouse Dragging on Web/Desktop
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
@@ -34,6 +37,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // Assign the global key here
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       // Apply the scroll behavior globally
       scrollBehavior: MyCustomScrollBehavior(),
