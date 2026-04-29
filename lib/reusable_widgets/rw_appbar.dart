@@ -33,8 +33,6 @@ class RwAppbar extends StatelessWidget {
             onPressed: onMenuPressed,
           ),
           const Spacer(),
-          Icon(Icons.notifications_none, color: iconColor),
-          const SizedBox(width: 20),
           _buildUserAvatar(),
         ],
       ),

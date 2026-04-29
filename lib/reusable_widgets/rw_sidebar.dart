@@ -152,12 +152,14 @@ class _SidebarItem extends StatelessWidget {
                 color: isSelected ? primaryColor : unselectedColor,
               ),
               const SizedBox(width: 15),
-              Text(
-                title,
-                style: TextStyle(
-                  color: isSelected ? primaryColor : unselectedColor,
-                  fontWeight:
-                  isSelected ? FontWeight.bold : FontWeight.w500,
+              Flexible(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? primaryColor : unselectedColor,
+                    fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
                 ),
               ),
             ],

@@ -5,12 +5,12 @@ import 'package:delivery_app/firestore/enums/e_packages_status.dart';
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/models/m_user.dart';
 import 'package:delivery_app/firestore/package_db.dart';
-import 'package:delivery_app/firestore/user_db.dart';
 import 'package:delivery_app/init/loading_overlay.dart';
 import 'package:delivery_app/reusable_widgets/rw_appbar.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar.dart';
 import 'package:delivery_app/reusable_widgets/rw_sidebar_item.dart';
 import 'package:delivery_app/tools/default_colors.dart';
+import 'package:delivery_app/views/admin_views/admin_use_selection_page.dart';
 import 'package:delivery_app/views/admin_views/packages_admin_page.dart';
 import 'package:delivery_app/views/admin_views/packages_payed_admin_page.dart';
 import 'package:delivery_app/views/admin_views/packages_waiting_admin_page.dart';
@@ -30,7 +30,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
   bool _isSidebarOpen = true;
   bool? _isReady;
-  late List<bool> _activatedPages;
 
   final PackageDB _db = PackageDB();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -38,8 +37,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
   @override
   void initState() {
     super.initState();
-    // On initialise avec une taille suffisante pour couvrir pages + actions
-    _activatedPages = List.generate(10, (index) => index == 0);
     _initAdmin();
   }
 
@@ -59,67 +56,6 @@ class _AdminHomePageState extends State<AdminHomePage> {
     }
   }
 
-  Future<void> _showUserSelectionDialog(EPackageStatus status) async {
-    UserModel? selectedUser;
-    final UserDB userRepo = UserDB();
-
-    showDialog(
-      context: context,
-      builder: (ctx) =>
-          AlertDialog(
-            title: Text("Sélectionner l'expéditeur"),
-            content: FutureBuilder<List<UserModel>>(
-              future: userRepo.getAllUsers(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const SizedBox(
-                    height: 100, // Une hauteur fixe pour éviter que la popup ne saute à la fin du chargement
-                    child: Center(
-                      child: SizedBox(
-                        height: 30,
-                        width: 30,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 3, // Optionnel : réduit l'épaisseur du trait
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<UserModel>(
-                      decoration: const InputDecoration(
-                          labelText: "Expéditeur"),
-                      items: snapshot.data!.map((user) {
-                        return DropdownMenuItem(
-                          value: user,
-                          child: Text(user.username),
-                        );
-                      }).toList(),
-                      onChanged: (val) => selectedUser = val,
-                    ),
-                  ],
-                );
-              },
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx),
-                  child: const Text("ANNULER")),
-              ElevatedButton(
-                onPressed: () {
-                  if (selectedUser != null) {
-                    Navigator.pop(ctx);
-                    _handlePrintByUser(status, selectedUser!);
-                  }
-                },
-                child: const Text("CONTINUER"),
-              ),
-            ],
-          ),
-    );
-  }
 
   // --- Logique d'impression ---
 
@@ -294,12 +230,20 @@ class _AdminHomePageState extends State<AdminHomePage> {
       RwSideBarItem(
         title: "Imprimer Retours",
         icon: Icons.print,
-        onTap: () => _showUserSelectionDialog(EPackageStatus.permanentReturn),
+        page: AdminUserSelectionPage(
+          status: EPackageStatus.permanentReturn,
+          onUserSelected: (user) =>
+              _handlePrintByUser(EPackageStatus.permanentReturn, user),
+        ),
       ),
       RwSideBarItem(
         title: "Imprimer Payés",
         icon: Icons.print,
-        onTap: () => _showUserSelectionDialog(EPackageStatus.payed),
+        page: AdminUserSelectionPage(
+          status: EPackageStatus.payed,
+          onUserSelected: (user) =>
+              _handlePrintByUser(EPackageStatus.payed, user),
+        ),
       ),
     ];
   }
@@ -357,17 +301,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
       backgroundColor: DefaultColors.accent,
       unselectedColor: Colors.white70,
       onItemSelected: (index) {
-        if (items[index].onTap != null) {
-          Navigator.of(context).maybePop(); // close drawer first
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            items[index].onTap!();
-          });
-        } else {
-          setState(() {
-            _selectedIndex = index;
-            _activatedPages[index] = true;
-          });
-        }
+        setState(() {
+          _selectedIndex = index;
+        });
       },
       onLogout: _handleLogout,
     );
