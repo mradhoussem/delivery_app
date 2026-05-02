@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:delivery_app/firestore/enums/e_packages_status.dart'; // Ensure this is imported
 import 'package:delivery_app/firestore/models/m_package.dart';
 import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
@@ -65,6 +66,22 @@ class _PackagesListPageState extends State<PackagesListPage> {
     _searchController.dispose();
     RefreshNotifier().refreshCounter.removeListener(_resetAndReload);
     super.dispose();
+  }
+
+  // --- Logic for Status Label ---
+  String _getStatusHeaderLabel() {
+    if (_activeStatus == null) return "Toutes les Colis";
+
+    // Attempt to match the string status to the Enum label
+    try {
+      final statusEnum = EPackageStatus.values.firstWhere(
+            (e) => e.name == _activeStatus,
+        orElse: () => EPackageStatus.waiting,
+      );
+      return "Colis ${statusEnum.label}";
+    } catch (_) {
+      return "Colis ${_activeStatus!.toUpperCase()}";
+    }
   }
 
   void _onPhoneTextChanged() {
@@ -191,12 +208,33 @@ class _PackagesListPageState extends State<PackagesListPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                _activeStatus == null ? "Toutes les Colis" : "Colis : ${_activeStatus!.toUpperCase()}",
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: DefaultColors.textPrimary,
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsetsGeometry.all(5),
+                  child: Text(
+                    _getStatusHeaderLabel(),
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: DefaultColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              // --- Added Refresh Button ---
+              Container(
+                decoration: const BoxDecoration(
+                  color: DefaultColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  tooltip: "Rafraîchir",
+                  icon: const Icon(
+                    Icons.refresh,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  onPressed: _resetAndReload,
                 ),
               ),
             ],
@@ -250,7 +288,7 @@ class _PackagesListPageState extends State<PackagesListPage> {
   }
 
   Widget _buildBody() {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading && _allPackages.isEmpty) return const Center(child: CircularProgressIndicator());
     if (_hasError) return _buildErrorState();
     if (_allPackages.isEmpty) return const EmptyStateWidget();
 

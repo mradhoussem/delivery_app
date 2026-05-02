@@ -41,7 +41,7 @@ class PdfPermanentReturn {
         ]),
         footer: (context) => pw.Column(children: [
           pw.Divider(thickness: 1),
-          pw.Center(child: pw.Text("contact@express-colis.com", style: const pw.TextStyle(fontSize: 9))),
+          pw.Center(child: pw.Text("commercial.expresscolis@gmail.com", style: const pw.TextStyle(fontSize: 9))),
         ]),
         build: (context) => [
           pw.SizedBox(height: 10),

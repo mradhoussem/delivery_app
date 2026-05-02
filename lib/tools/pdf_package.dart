@@ -77,8 +77,16 @@ class PdfPackage {
                   pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text("EXPÉDITEUR :", style: pw.TextStyle(font: ttfBold, fontSize: 6, color: PdfColors.grey700)),
-                      pw.Text(package.creatorUsername.toUpperCase(), style: pw.TextStyle(font: ttfBold, fontSize: 10)),
+                      pw.Text("EXPÉDITEUR :", style: pw.TextStyle(font: ttfBold, fontSize: 5, color: PdfColors.grey700)),
+                      pw.Text(package.creatorUsername, style: pw.TextStyle(font: ttfBold, fontSize: 6)),
+                      pw.Text("Matricule fiscale :", style: pw.TextStyle(font: ttfBold , fontSize: 5)),
+                      pw.Text(package.creatorTaxId, style: pw.TextStyle(font: ttfBold , fontSize: 5,)),
+                    ],
+                  ),
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+
                     ],
                   ),
                 ],
@@ -104,7 +112,7 @@ class PdfPackage {
               ),
               pw.Spacer(), // Pousse le texte de contact vers le bas
               pw.Divider(thickness: 0.5, height: 5),
-              pw.Center(child: pw.Text("contact@express-colis.com", style: const pw.TextStyle(fontSize: 5))),
+              pw.Center(child: pw.Text("commercial.expresscolis@gmail.com", style: const pw.TextStyle(fontSize: 5))),
             ],
           ),
         ),

@@ -20,6 +20,7 @@ class UserHomePage extends StatefulWidget {
 
 class _UserHomePageState extends State<UserHomePage> {
   int _selectedIndex = 0;
+  final List<int> _history = [0];
   String _username = "Utilisateur";
   String? _userid;
   String? _selectedStatus;
@@ -110,46 +111,61 @@ class _UserHomePageState extends State<UserHomePage> {
     final bool isWeb = MediaQuery.of(context).size.width > 900;
     final items = _buildItems();
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: DefaultColors.pagesBackground,
-      drawer: isWeb ? null : _buildSidebar(items),
-      body: Row(
-        children: [
-          if (isWeb && _isSidebarOpen) _buildSidebar(items),
-          Expanded(
-            child: Column(
-              children: [
-                RwAppbar(
-                  username: _username,
-                  primaryColor: DefaultColors.primary,
-                  onMenuPressed: () {
-                    if (isWeb) {
-                      setState(() => _isSidebarOpen = !_isSidebarOpen);
-                    } else {
-                      _scaffoldKey.currentState?.openDrawer();
-                    }
-                  },
-                ),
-                Expanded(
-                  child: _userid == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : IndexedStack(
-                    index: _selectedIndex,
-                    children: items.map((item) {
-                      int idx = items.indexOf(item);
-                      return item.page != null
-                          ? (_activatedPages[idx]
-                          ? item.page!
-                          : const SizedBox.shrink())
-                          : const SizedBox.shrink();
-                    }).toList(),
+    return PopScope(
+      canPop: _history.length <= 1,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        if (_history.length > 1) {
+          setState(() {
+            // Remove the current page from history
+            _history.removeLast();
+            // Set the index to the new "last" page in history
+            _selectedIndex = _history.last;
+          });
+        }
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: DefaultColors.pagesBackground,
+        drawer: isWeb ? null : _buildSidebar(items),
+        body: Row(
+          children: [
+            if (isWeb && _isSidebarOpen) _buildSidebar(items),
+            Expanded(
+              child: Column(
+                children: [
+                  RwAppbar(
+                    username: _username,
+                    primaryColor: DefaultColors.primary,
+                    onMenuPressed: () {
+                      if (isWeb) {
+                        setState(() => _isSidebarOpen = !_isSidebarOpen);
+                      } else {
+                        _scaffoldKey.currentState?.openDrawer();
+                      }
+                    },
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: _userid == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : IndexedStack(
+                            index: _selectedIndex,
+                            children: items.map((item) {
+                              int idx = items.indexOf(item);
+                              return item.page != null
+                                  ? (_activatedPages[idx]
+                                        ? item.page!
+                                        : const SizedBox.shrink())
+                                  : const SizedBox.shrink();
+                            }).toList(),
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -164,6 +180,7 @@ class _UserHomePageState extends State<UserHomePage> {
       onItemSelected: (index) {
         // Reset du statut si on clique manuellement sur le menu latéral
         _navigateToTab(index, status: null);
+        _history.add(index);
       },
       onLogout: _handleLogout,
     );

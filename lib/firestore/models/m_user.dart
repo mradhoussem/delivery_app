@@ -4,24 +4,26 @@ class UserModel {
   final String id;
   final String username;
   final String firstName;
-  final String lastName;
-  final String? email; // Added optional email
+  final String? lastName;
+  final String? email;
   final String phone1;
   final String phone2;
   final String role;
   final double deliveryCosts;
+  final String taxId;
   final DateTime createdAt;
 
   const UserModel({
     required this.id,
     required this.username,
     required this.firstName,
-    required this.lastName,
-    this.email, // Optional
+    this.lastName,
+    this.email,
     required this.phone1,
     required this.phone2,
     required this.role,
     required this.deliveryCosts,
+    required this.taxId,
     required this.createdAt,
   });
 
@@ -35,6 +37,7 @@ class UserModel {
     String? phone2,
     String? role,
     double? deliveryCosts,
+    String? taxId,
     DateTime? createdAt,
   }) {
     return UserModel(
@@ -47,6 +50,7 @@ class UserModel {
       phone2: phone2 ?? this.phone2,
       role: role ?? this.role,
       deliveryCosts: deliveryCosts ?? this.deliveryCosts,
+      taxId: taxId ?? this.taxId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -58,11 +62,11 @@ class UserModel {
       firstName: data['firstName'] ?? '',
       lastName: data['lastName'] ?? '',
       email: data['email'],
-      // Fetch from map
       phone1: data['phone1'] ?? '',
       phone2: data['phone2'] ?? '',
       role: data['role'] ?? 'user',
       deliveryCosts: (data['deliveryCosts'] ?? 0.0).toDouble(),
+      taxId: data['taxId'] ?? '',
       createdAt: _parseDate(data['createdAt']),
     );
   }
@@ -73,11 +77,12 @@ class UserModel {
       'username': username,
       'firstName': firstName,
       'lastName': lastName,
-      'email': email, // Add to map
+      'email': email,
       'phone1': phone1,
       'phone2': phone2,
       'role': role,
       'deliveryCosts': deliveryCosts,
+      'taxId': taxId,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }

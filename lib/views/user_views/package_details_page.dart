@@ -68,7 +68,9 @@ class PackageDetailsPage extends StatelessWidget {
                 children: [
                   _infoRow(Icons.calendar_month, "Date de création", DateFormat('dd/MM/yyyy HH:mm').format(package.createdAt)),
                   _infoRow(Icons.admin_panel_settings_outlined, "Créé par", package.creatorUsername),
-                  _infoRow(Icons.info_outline, "Status actuel", package.status.label),              ],
+                  _infoRow(Icons.assignment_ind_outlined, "Matricule Fiscale", package.creatorTaxId), // Added Tax ID
+                  _infoRow(Icons.info_outline, "Status actuel", package.status.label),
+                ],
               ),
             ],
           ),

@@ -70,6 +70,7 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setBool('is_user_logged_in', true);
         await prefs.setString('user_id', user.id);
         await prefs.setString('username', user.username);
+        await prefs.setString('tax_id', user.taxId);
 
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/userHomePage');

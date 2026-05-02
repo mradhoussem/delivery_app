@@ -5,6 +5,7 @@ import 'package:delivery_app/firestore/package_db.dart';
 import 'package:delivery_app/reusable_widgets/rw_dropdown.dart';
 import 'package:delivery_app/reusable_widgets/rw_expandable_widget.dart';
 import 'package:delivery_app/reusable_widgets/rw_textview.dart';
+import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:delivery_app/views/user_views/package_item_card.dart';
 import 'package:flutter/material.dart';
@@ -139,9 +140,30 @@ class _PackagesWaitingAdminPageState extends State<PackagesWaitingAdminPage> {
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      child:
-          const Text("Colis en Attente", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
-
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Colis en Attente",
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+          ),
+          Container(
+            decoration: const BoxDecoration(
+              color: DefaultColors.primary, // Using your primary color
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              tooltip: "Rafraîchir",
+              icon: const Icon(
+                Icons.refresh,
+                color: Colors.white,
+                size: 24,
+              ),
+              onPressed: _resetAndReload,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

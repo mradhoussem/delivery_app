@@ -30,7 +30,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
   int _selectedIndex = 0;
   bool _isSidebarOpen = true;
   bool? _isReady;
-
+  final List<int> _history = [0];
   final PackageDB _db = PackageDB();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -253,41 +253,56 @@ class _AdminHomePageState extends State<AdminHomePage> {
     final bool isWeb = MediaQuery.of(context).size.width > 900;
     final items = _buildItems();
 
-    return Scaffold(
-      key: _scaffoldKey,
-      backgroundColor: DefaultColors.pagesBackground,
-      drawer: isWeb ? null : _buildSidebar(items),
-      body: Row(
-        children: [
-          if (isWeb && _isSidebarOpen) _buildSidebar(items),
-          Expanded(
-            child: Column(
-              children: [
-                RwAppbar(
-                  username: "Administrateur",
-                  primaryColor: DefaultColors.primary,
-                  onMenuPressed: () {
-                    if (isWeb) {
-                      setState(() => _isSidebarOpen = !_isSidebarOpen);
-                    } else {
-                      _scaffoldKey.currentState?.openDrawer();
-                    }
-                  },
-                ),
-                Expanded(
-                  child: _isReady == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : IndexedStack(
-                    index: _selectedIndex,
-                    children: items.map((item) {
-                      return item.page ?? const SizedBox.shrink();
-                    }).toList(),
+    return PopScope(
+      canPop: _history.length <= 1,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+
+        if (_history.length > 1) {
+          setState(() {
+            // Remove the current page from history
+            _history.removeLast();
+            // Set the index to the new "last" page in history
+            _selectedIndex = _history.last;
+          });
+        }
+      },
+      child: Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: DefaultColors.pagesBackground,
+        drawer: isWeb ? null : _buildSidebar(items),
+        body: Row(
+          children: [
+            if (isWeb && _isSidebarOpen) _buildSidebar(items),
+            Expanded(
+              child: Column(
+                children: [
+                  RwAppbar(
+                    username: "Administrateur",
+                    primaryColor: DefaultColors.primary,
+                    onMenuPressed: () {
+                      if (isWeb) {
+                        setState(() => _isSidebarOpen = !_isSidebarOpen);
+                      } else {
+                        _scaffoldKey.currentState?.openDrawer();
+                      }
+                    },
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: _isReady == null
+                        ? const Center(child: CircularProgressIndicator())
+                        : IndexedStack(
+                      index: _selectedIndex,
+                      children: items.map((item) {
+                        return item.page ?? const SizedBox.shrink();
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -303,6 +318,7 @@ class _AdminHomePageState extends State<AdminHomePage> {
       onItemSelected: (index) {
         setState(() {
           _selectedIndex = index;
+          _history.add(index);
         });
       },
       onLogout: _handleLogout,

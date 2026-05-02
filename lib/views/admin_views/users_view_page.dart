@@ -1,5 +1,6 @@
 import 'package:delivery_app/firestore/models/m_user.dart';
 import 'package:delivery_app/firestore/user_db.dart';
+import 'package:delivery_app/reusable_widgets/rw_textview.dart';
 import 'package:delivery_app/tools/default_colors.dart';
 import 'package:delivery_app/tools/refresh_notifier.dart';
 import 'package:delivery_app/views/admin_views/add_user_page.dart';
@@ -15,31 +16,28 @@ class UsersViewPage extends StatefulWidget {
 
 class _UsersViewPageState extends State<UsersViewPage> {
   final UserDB _userRepo = UserDB();
+  final TextEditingController _searchController = TextEditingController();
 
-  // Cache System statique pour préserver les données entre les onglets
   static final Map<String, _UserCache> _globalCache = {};
 
   List<UserModel>? _users;
+  List<UserModel>? _filteredUsers;
   bool _isLoading = false;
-
-  // 1. Variable pour suivre l'initialisation
   bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    // 2. Écouter les rafraîchissements globaux (ex: après ajout user ou scan)
     RefreshNotifier().refreshCounter.addListener(_resetAndReload);
   }
 
   @override
   void dispose() {
-    // 3. Nettoyage de l'écouteur
+    _searchController.dispose();
     RefreshNotifier().refreshCounter.removeListener(_resetAndReload);
     super.dispose();
   }
 
-  // 4. MÉTHODE DE RÉFÉRENCE : Appellée par le parent quand l'onglet devient visible
   void initDataIfNeeded() {
     if (!_isInitialized) {
       _fetchUsers();
@@ -47,24 +45,35 @@ class _UsersViewPageState extends State<UsersViewPage> {
     }
   }
 
-  // --- Logique de Gestion des Données ---
-
   void _resetAndReload() {
     if (!mounted) return;
-    _globalCache.clear(); // On vide le cache car une donnée a changé en DB
+    _globalCache.clear();
     _fetchUsers();
+  }
+
+  void _handleSearch() {
+    final query = _searchController.text.trim().toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredUsers = _users;
+      } else {
+        _filteredUsers = _users?.where((user) {
+          return user.username.toLowerCase().contains(query) ||
+              user.firstName.toLowerCase().contains(query);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _fetchUsers() async {
     const cacheKey = "all_users_list";
 
-    // Vérifier si on a un cache valide (moins de 5 minutes)
-    if (_globalCache.containsKey(cacheKey) &&
-        !_globalCache[cacheKey]!.isExpired) {
+    if (_globalCache.containsKey(cacheKey) && !_globalCache[cacheKey]!.isExpired) {
       if (mounted) {
         setState(() {
           _users = _globalCache[cacheKey]!.users;
           _isLoading = false;
+          _handleSearch();
         });
       }
       return;
@@ -75,17 +84,13 @@ class _UsersViewPageState extends State<UsersViewPage> {
 
     try {
       final data = await _userRepo.getAllUsers();
-
-      // Mettre en cache
-      _globalCache[cacheKey] = _UserCache(
-        users: data,
-        cachedAt: DateTime.now(),
-      );
+      _globalCache[cacheKey] = _UserCache(users: data, cachedAt: DateTime.now());
 
       if (mounted) {
         setState(() {
           _users = data;
           _isLoading = false;
+          _handleSearch();
         });
       }
     } catch (e) {
@@ -106,11 +111,8 @@ class _UsersViewPageState extends State<UsersViewPage> {
     );
   }
 
-  // --- UI Build ---
-
   @override
   Widget build(BuildContext context) {
-    // 5. Sécurité : Initialisation si build est appelé directement
     if (!_isInitialized) {
       initDataIfNeeded();
     }
@@ -124,7 +126,6 @@ class _UsersViewPageState extends State<UsersViewPage> {
             context,
             MaterialPageRoute(builder: (context) => const AddUserPage()),
           );
-          // Le RefreshNotifier dans AddUserPage déclenchera la mise à jour ici
         },
         icon: const Icon(Icons.person_add_alt_1, color: Colors.white),
         label: const Text(
@@ -136,11 +137,11 @@ class _UsersViewPageState extends State<UsersViewPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
           Expanded(
             child: _isLoading && (_users == null || _users!.isEmpty)
                 ? const Center(child: CircularProgressIndicator())
-                : _users == null || _users!.isEmpty
+                : _filteredUsers == null || _filteredUsers!.isEmpty
                 ? _buildEmptyState()
                 : _buildUserList(),
           ),
@@ -150,32 +151,70 @@ class _UsersViewPageState extends State<UsersViewPage> {
   }
 
   Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.all(10),
-      child: Text(
-        "Gestion des Utilisateurs",
-        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Gestion des Utilisateurs",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              Expanded(
+                child: RwTextview(
+                  controller: _searchController,
+                  hint: "Rechercher par nom d'utilisateur...",
+                  prefixIcon: Icons.search,
+                  backgroundColor: Colors.white,
+                  onSubmitted: (_) => _handleSearch(),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                height: 50,
+                width: 50,
+                decoration: BoxDecoration(
+                  color: DefaultColors.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.search, color: Colors.white),
+                  onPressed: _handleSearch,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEmptyState() {
     return ListView(
-      children: const [
-        SizedBox(height: 100),
-        Center(child: Text(
-            "Aucun utilisateur trouvé", style: TextStyle(color: Colors.grey))),
+      children: [
+        const SizedBox(height: 100),
+        Center(
+          child: Text(
+            _searchController.text.isEmpty
+                ? "Aucun utilisateur trouvé"
+                : "Aucun résultat pour '${_searchController.text}'",
+            style: const TextStyle(color: Colors.grey),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildUserList() {
     return ListView.separated(
-      padding: const EdgeInsets.only(left: 30, right: 30, bottom: 100),
-      itemCount: _users!.length,
+      padding: const EdgeInsets.only(left: 15, right: 15, bottom: 100),
+      itemCount: _filteredUsers!.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final user = _users![index];
+        final user = _filteredUsers![index];
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -208,14 +247,12 @@ class _UsersViewPageState extends State<UsersViewPage> {
             trailing: IconButton(
               tooltip: "Réinitialiser mot de passe",
               icon: const Icon(Icons.lock_reset, color: Colors.grey),
-              onPressed: () =>
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          EditPasswordPage(
-                            userId: user.id,
-                            userName: user.username,
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditPasswordPage(
+                    userId: user.id,
+                    userName: user.username,
                   ),
                 ),
               ),
@@ -244,12 +281,13 @@ class _UsersViewPageState extends State<UsersViewPage> {
           children: [
             _detailRow("Identifiant:", "@${user.username}"),
             _detailRow("Nom complet:", "${user.firstName} ${user.lastName}"),
-            if(user.email != null && user.email != "" )
+            _detailRow("M-F:", user.taxId), // Added Matricule Fiscale
+            if (user.email != null && user.email != "")
               _detailRow("Email:", "${user.email}"),
             _detailRow("Téléphone 1:", user.phone1),
             if (user.phone2.isNotEmpty) _detailRow("Téléphone 2:", user.phone2),
             _detailRow("Frais Livraison:", "${user.deliveryCosts} TND"),
-            _detailRow("Rôle:", user.role.toUpperCase()),
+            // User Role removed as requested
             const Divider(height: 30),
             Text(
               "Créé le: ${user.createdAt.toString().split(' ')[0]}",

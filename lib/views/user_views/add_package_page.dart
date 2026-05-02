@@ -27,7 +27,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
   final TextEditingController _phone2Controller = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _productDesignationController = TextEditingController(); // <--- NOUVEAU
+  final TextEditingController _productDesignationController = TextEditingController();
   final TextEditingController _designationController = TextEditingController();
   final TextEditingController _commentController = TextEditingController();
 
@@ -43,7 +43,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
     _phone2Controller.dispose();
     _addressController.dispose();
     _amountController.dispose();
-    _productDesignationController.dispose(); // <--- NOUVEAU
+    _productDesignationController.dispose();
     _designationController.dispose();
     _commentController.dispose();
     super.dispose();
@@ -58,6 +58,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
       final prefs = await SharedPreferences.getInstance();
       final String? userId = prefs.getString('user_id');
       final String? username = prefs.getString('username');
+      final String? taxId = prefs.getString('tax_id'); // <--- RETRIEVE TAX ID
 
       if (userId == null || username == null) {
         throw Exception('Session expirée.');
@@ -68,29 +69,22 @@ class _AddPackagePageState extends State<AddPackagePage> {
         firstName: _fNameController.text.trim(),
         lastName: _lNameController.text.trim(),
         phone1: _phone1Controller.text.trim(),
-        phone2: _phone2Controller.text
-            .trim()
-            .isEmpty ? null : _phone2Controller.text.trim(),
+        phone2: _phone2Controller.text.trim().isEmpty ? null : _phone2Controller.text.trim(),
         governorate: EGovernorateExtension.fromName(_selectedGov!),
         address: _addressController.text.trim(),
-        amount: double.parse(
-            _amountController.text.trim().replaceAll(',', '.')),
+        amount: double.parse(_amountController.text.trim().replaceAll(',', '.')),
         deliveryCost: 0.0,
         isExchange: _isExchange,
-        productDesignation: _productDesignationController.text
-            .trim()
-            .isEmpty ? null : _productDesignationController.text.trim(),
-        // <--- NOUVEAU
-        packageDesignation: _isExchange
-            ? _designationController.text.trim()
-            : null,
-        comment: _commentController.text
-            .trim()
-            .isEmpty ? null : _commentController.text.trim(),
+        productDesignation: _productDesignationController.text.trim().isEmpty
+            ? null
+            : _productDesignationController.text.trim(),
+        packageDesignation: _isExchange ? _designationController.text.trim() : null,
+        comment: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
         status: EPackageStatus.waiting,
         createdAt: DateTime.now(),
         creatorUserId: userId,
         creatorUsername: username,
+        creatorTaxId: taxId ?? '', // <--- PASS TAX ID TO MODEL
       );
 
       final docRef = await _db.addPackage(package: newPackage, userId: userId);
@@ -186,10 +180,7 @@ class _AddPackagePageState extends State<AddPackagePage> {
               RwDropdown(
                 value: _selectedGov,
                 items: EGovernorate.values.map((e) => e.name).toList(),
-                itemLabelBuilder: (name) =>
-                EGovernorateExtension
-                    .fromName(name)
-                    .label,
+                itemLabelBuilder: (name) => EGovernorateExtension.fromName(name).label,
                 onChanged: (val) => setState(() => _selectedGov = val),
               ),
               const SizedBox(height: 15),
@@ -203,7 +194,6 @@ class _AddPackagePageState extends State<AddPackagePage> {
               const SizedBox(height: 15),
               RwTextview(
                 controller: _productDesignationController,
-                // <--- NOUVEAU CHAMP
                 hint: 'Désignation du produit (Ex: Chaussures)',
                 prefixIcon: Icons.shopping_bag_outlined,
                 iconColor: DefaultColors.primary,

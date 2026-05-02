@@ -13,13 +13,14 @@ class PackageModel {
   final double amount;
   final double deliveryCost;
   final bool isExchange;
-  final String? productDesignation; // <--- NOUVEAU CHAMP
+  final String? productDesignation;
   final String? packageDesignation;
   final String? comment;
   final EPackageStatus status;
   final DateTime createdAt;
   final String creatorUserId;
   final String creatorUsername;
+  final String creatorTaxId; // <--- NEW FIELD
 
   const PackageModel({
     required this.id,
@@ -32,12 +33,13 @@ class PackageModel {
     required this.amount,
     required this.deliveryCost,
     this.isExchange = false,
-    this.productDesignation, // <--- NOUVEAU CHAMP
+    this.productDesignation,
     this.packageDesignation,
     this.comment,
     this.status = EPackageStatus.waiting,
     required this.creatorUserId,
     required this.creatorUsername,
+    required this.creatorTaxId, // <--- NEW FIELD
     required this.createdAt,
   });
 
@@ -52,13 +54,14 @@ class PackageModel {
     double? amount,
     double? deliveryCost,
     bool? isExchange,
-    String? productDesignation, // <--- NOUVEAU
+    String? productDesignation,
     String? packageDesignation,
     String? comment,
     EPackageStatus? status,
     DateTime? createdAt,
     String? creatorUserId,
     String? creatorUsername,
+    String? creatorTaxId, // <--- NEW FIELD
   }) {
     return PackageModel(
       id: id ?? this.id,
@@ -72,13 +75,13 @@ class PackageModel {
       deliveryCost: deliveryCost ?? this.deliveryCost,
       isExchange: isExchange ?? this.isExchange,
       productDesignation: productDesignation ?? this.productDesignation,
-      // <--- NOUVEAU
       packageDesignation: packageDesignation ?? this.packageDesignation,
       comment: comment ?? this.comment,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       creatorUserId: creatorUserId ?? this.creatorUserId,
       creatorUsername: creatorUsername ?? this.creatorUsername,
+      creatorTaxId: creatorTaxId ?? this.creatorTaxId, // <--- NEW FIELD
     );
   }
 
@@ -93,12 +96,13 @@ class PackageModel {
       'amount': amount,
       'deliveryCost': deliveryCost,
       'isExchange': isExchange,
-      'productDesignation': productDesignation, // <--- NOUVEAU
+      'productDesignation': productDesignation,
       'packageDesignation': packageDesignation,
       'comment': comment,
       'status': status.name,
       'creatorUserId': creatorUserId,
       'creatorUsername': creatorUsername,
+      'creatorTaxId': creatorTaxId, // <--- NEW FIELD
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -116,7 +120,6 @@ class PackageModel {
       deliveryCost: _parseDouble(data['deliveryCost']),
       isExchange: data['isExchange'] ?? false,
       productDesignation: data['productDesignation'],
-      // <--- NOUVEAU
       packageDesignation: data['packageDesignation'],
       comment: data['comment'],
       status: EPackageStatus.values.firstWhere(
@@ -125,6 +128,7 @@ class PackageModel {
       ),
       creatorUserId: data['creatorUserId'] ?? '',
       creatorUsername: data['creatorUsername'] ?? '',
+      creatorTaxId: data['creatorTaxId'] ?? '', // <--- NEW FIELD
       createdAt: _parseDate(data['createdAt']),
     );
   }

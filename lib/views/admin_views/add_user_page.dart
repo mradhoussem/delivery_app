@@ -19,7 +19,8 @@ class _AddUserPageState extends State<AddUserPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController(); // New
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _taxIdController = TextEditingController(); // New
   final TextEditingController _phone1Controller = TextEditingController();
   final TextEditingController _phone2Controller = TextEditingController();
   final TextEditingController _deliveryCostsController = TextEditingController();
@@ -33,7 +34,8 @@ class _AddUserPageState extends State<AddUserPage> {
     _nameController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _emailController.dispose(); // New
+    _emailController.dispose();
+    _taxIdController.dispose(); // New
     _phone1Controller.dispose();
     _phone2Controller.dispose();
     _deliveryCostsController.dispose();
@@ -61,13 +63,12 @@ class _AddUserPageState extends State<AddUserPage> {
         username: username,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        email: _emailController.text
-            .trim()
-            .isEmpty ? null : _emailController.text.trim(),
+        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
         phone1: _phone1Controller.text.trim(),
         phone2: _phone2Controller.text.trim(),
         role: 'user',
         deliveryCosts: double.tryParse(_deliveryCostsController.text.replaceAll(',', '.')) ?? 0.0,
+        taxId: _taxIdController.text.trim(), // New
         createdAt: DateTime.now(),
       );
 
@@ -141,7 +142,6 @@ class _AddUserPageState extends State<AddUserPage> {
                       hint: "Nom",
                       prefixIcon: Icons.person,
                       iconColor: DefaultColors.primary,
-                      validator: (v) => v!.isEmpty ? "Requis" : null,
                       maxLength: 256,
                     ),
                   ),
@@ -149,7 +149,16 @@ class _AddUserPageState extends State<AddUserPage> {
               ),
               const SizedBox(height: 15),
 
-              // --- EMAIL FIELD (OPTIONAL) ---
+              RwTextview(
+                controller: _taxIdController,
+                hint: "Matricule Fiscale",
+                prefixIcon: Icons.assignment_ind_outlined,
+                iconColor: DefaultColors.primary,
+                validator: (v) => v!.isEmpty ? "Requis" : null,
+                maxLength: 100,
+              ),
+              const SizedBox(height: 15),
+
               RwTextview(
                 controller: _emailController,
                 hint: "Email (Optionnel)",
